@@ -331,7 +331,7 @@ main,.app,#content{max-width:var(--ux-content-max);margin-left:auto;margin-right
 <div class="btn-row" style="margin-top:14px;"><button class="btn" id="btnTeamLoeschen" style="background:var(--red-soft);color:var(--red);">Dieses Team löschen</button></div>
 </div>
 <div class="card" id="exchangeCard">
-<div class="card-head"><h3>RH App-Familie · Datenaustausch</h3><span class="pill blue">RHS Exchange v1</span></div>
+<div class="card-head"><h3>RH App-Familie · Datenaustausch</h3><span class="pill blue">RHS Exchange v2</span></div>
 <p class="muted" style="font-size:.85rem;">Optionaler, verzögerter Abgleich: Die App funktioniert vollständig allein. Ein Austausch kann auch erst nach Wochen oder Monaten erfolgen. Neuere Feldstände werden erkannt; ältere Daten überschreiben sie nicht automatisch.</p>
 <div class="btn-row" style="margin-top:12px;">
 <button class="btn" id="btnExchangeExport">Team-Paket exportieren</button>
@@ -824,6 +824,17 @@ function showStorageWarning(message){
 function lsSet(key, val){
   try{ localStorage.setItem(key, JSON.stringify(val)); return true; }
   catch(e){ showStorageWarning(); return false; }
+}
+function showInfoToast(message){
+  let box = document.getElementById('infoToast');
+  if(!box){
+    box = document.createElement('div'); box.id='infoToast'; box.setAttribute('role','status');
+    box.style.cssText='position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;background:#e6f4ea;border:1px solid #8fbf9f;color:#1b4332;border-radius:10px;padding:12px 14px;box-shadow:0 4px 18px rgba(0,0,0,.18);font-size:.9rem;';
+    document.body.appendChild(box);
+  }
+  box.textContent = message;
+  clearTimeout(box._hideTimer);
+  box._hideTimer = setTimeout(()=>{ box.remove(); }, 4000);
 }
 
 /* ============================== Rasse-Hinweise ============================== */
@@ -1339,7 +1350,7 @@ const STATE_KEY = 'tbrh:state:v1';
 let state = lsGet(STATE_KEY, {});
 /* Zweiter Speicherort (IndexedDB): schützt vor Verlust, wenn localStorage voll ist oder vom System geleert wird. */
 function idbOpenTb(fn){ try{ const q=indexedDB.open('RHS-Teambegleiter',1); q.onupgradeneeded=()=>{ if(!q.result.objectStoreNames.contains('states')) q.result.createObjectStore('states'); }; q.onsuccess=()=>{ try{ fn(q.result); }catch(e){} }; }catch(e){} }
-function idbMirrorState(){ idbOpenTb(db=>{ const tx=db.transaction('states','readwrite'); tx.objectStore('states').put({savedAt:new Date().toISOString(),state:JSON.parse(JSON.stringify(state))},STATE_KEY); tx.oncomplete=()=>db.close(); }); }
+function idbMirrorState(){ const savedAt=state.savedAt, snapshot=JSON.parse(JSON.stringify(state)); idbOpenTb(db=>{ const tx=db.transaction('states','readwrite'); tx.objectStore('states').put({savedAt:savedAt,state:snapshot},STATE_KEY); tx.oncomplete=()=>db.close(); }); }
 function idbRecoverState(after){ idbOpenTb(db=>{ const r=db.transaction('states','readonly').objectStore('states').get(STATE_KEY); r.onsuccess=()=>{ db.close(); const m=r.result; const localAt=String(state&&state.savedAt||''); if(m&&m.state&&(!state||!Array.isArray(state.teams)||!state.teams.length||String(m.savedAt||'')>localAt)){ state=m.state; lsSet(STATE_KEY,state); if(after)after(true); } else if(after) after(false); }; r.onerror=()=>{ db.close(); if(after)after(false); }; }); }
 function saveState(){ state.savedAt=new Date().toISOString(); const ok=lsSet(STATE_KEY, state); idbMirrorState(); return ok; }
 function renderAll(){
@@ -2796,7 +2807,7 @@ function init(){
   ensureActiveTeam();
   migrateExerciseProgress();
   saveState();
-  idbRecoverState(ok=>{ if(ok){ try{ migrateState(); ensureActiveTeam(); renderTeamSwitcher(); renderAll(); showStorageWarning('Neuerer Datenstand aus dem Gerätespeicher wiederhergestellt.'); setTimeout(()=>{ const b=document.getElementById('storageWarning'); if(b) b.remove(); },6000); }catch(e){} } });
+  idbRecoverState(ok=>{ if(ok){ try{ migrateState(); ensureActiveTeam(); renderTeamSwitcher(); renderAll(); showInfoToast('Neuerer Datenstand aus dem Gerätespeicher wiederhergestellt.'); }catch(e){} } });
 
   renderTabs();
   renderTeamSwitcher();
