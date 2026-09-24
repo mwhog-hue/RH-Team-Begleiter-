@@ -1,7 +1,7 @@
 /* Team-Begleiter Rettungshund – Service Worker: startet die App auch ohne Internet.
    Die Daten liegen im lokalen Gerätespeicher, nicht in diesem Cache.
    Bei jeder neuen Version CACHE_VERSION erhöhen. */
-const CACHE_VERSION = 'teambegleiter-2.22.0';
+const CACHE_VERSION = 'teambegleiter-2.22.2';
 const DATEIEN = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 self.addEventListener('install', e=>{
   e.waitUntil(caches.open(CACHE_VERSION).then(c=>
