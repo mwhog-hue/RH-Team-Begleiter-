@@ -1,7 +1,7 @@
-/* Team-Begleiter Rettungshund – Service Worker v2.25.0
+/* Team-Begleiter Rettungshund – Service Worker v2.27.1
    Seite: zuerst Netz (damit neue Versionen sofort ankommen), offline aus dem Cache.
    Übrige Dateien: zuerst Cache, sonst Netz. */
-const CACHE = 'rh-teambegleiter-v2-25-0';
+const CACHE = 'rh-teambegleiter-v2-27-1';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './apple-touch-icon.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => Promise.all(CORE.map(u => c.add(u).catch(() => null)))));
