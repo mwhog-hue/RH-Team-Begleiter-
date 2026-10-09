@@ -1,3 +1,14 @@
+# Änderungen in Version 2.29.0 (09.10.2026)
+
+- **Filter „Wo?“** im Übungsrad: Egal · 🌧 Drinnen (Schlechtwetter) · Draußen. „Drinnen“ zeigt nur Übungen, die drinnen gehen (356 von 420). Übungen mit Hund oder als Helfer haben einen grünen Kasten „Drinnen üben“ mit Hinweisen, z. B. zu rutschfestem Boden, Raumgröße oder Lautstärke.
+- **Ausbilder-Regel neu:** Aus „Nur mit Ausbilder“ wird bei 70 Übungen „Erst mit Ausbilder“. Neue Übungen werden zuerst im Training geübt. Aus dem Training bekannte oder mit dem Ausbilder abgesprochene Übungen dürfen privat wiederholt werden, ggf. mit einem erfahrenen Helfer. Dafür gibt es einen eigenen Schalter. „Nur mit Ausbilder“ gilt noch für 11 Übungen (Trümmergelände, freigegebene Gebäude, Mantrailing). Diese erscheinen nur mit dem Schalter „Ausbilderin oder Ausbilder ist heute dabei“.
+- Das Übungsrad steht in der Du-Form (Bedienung und alle 420 Übungen).
+- **Neu: Schalter „Ein Helfer bzw. eine Versteckperson ist dabei“.** Ohne Haken erscheinen nur Übungen mit Hund, die allein mit dem eigenen Hund möglich sind (55 von 126). Die übrigen 71 tragen das Kennzeichen „mit Helfer/Versteckperson“.
+- **Neu: Anzeigeart aus dem Profil.** Übungen für eine andere Anzeigeart werden ausgeblendet (z. B. Bringsel-Gewöhnung beim Verbeller). Bringsel-Material entfällt, und ein Hinweis zeigt, dass Angaben zu anderen Anzeigearten nicht gelten.
+- Beim Veröffentlichen den Cache-Namen in `sw.js` hochzählen.
+
+---
+
 # Team-Begleiter Rettungshund – Version 2.28.0
 
 Stand: 09.10.2026 · Vorgängerversion: 2.27.2
