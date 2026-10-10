@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
-<title>Team-Begleiter Rettungshund · v2.31.0</title>
+<title>Team-Begleiter Rettungshund · v2.32.0</title>
 <style>
 :root{
   --paper:#f6f2e8; --card:#fcfaf3; --ink:#232922; --muted:#687066; --line:#d8d0bb;
@@ -220,7 +220,40 @@ main,.app,#content{max-width:var(--ux-content-max);margin-left:auto;margin-right
 #view-uebungsrad .uem-panel[hidden]{display:none;}
 /* Ergebnis/Detail nicht unter der klebenden Kopfzeile verstecken */
 #view-uebungsrad [data-res],#view-uebungsrad [data-detail]{scroll-margin-top:170px;}
-</style></head>
+</style><style id="tbm-style">
+/* v2.32.0 · Ansichtsumschalter und Reiter „Training“ */
+.ansicht-switch{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--card);}
+.ansicht-switch button{border:0;background:none;color:var(--muted);font-weight:700;font-size:.78rem;padding:6px 12px;cursor:pointer;}
+.ansicht-switch button[aria-pressed="true"]{background:var(--forest);color:var(--paper);}
+.modul-tile[hidden]{display:none !important;}
+#tbmRad[hidden],#tbmEinheit[hidden],#tbmAbenteuer[hidden],#tbmProblem[hidden],.tbm-problem-karte[hidden]{display:none !important;}
+.tbm-modus{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:5px;margin-top:10px;}
+.tbm-modus button{border:0;background:none;border-radius:10px;padding:10px 6px;font-weight:700;font-size:.85rem;color:var(--muted);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;}
+.tbm-modus button span{font-size:1.25rem;line-height:1;}
+.tbm-modus button[aria-selected="true"]{background:var(--card);color:var(--forest);box-shadow:0 1px 3px rgba(0,0,0,.14);}
+.tbm-badge{font-style:normal;font-size:.66rem;font-weight:800;background:var(--orange);color:#fff;border-radius:999px;padding:1px 7px;}
+.tbm-erkl{font-size:.88rem;margin-top:8px;}
+@media (max-width:560px){.tbm-modus{grid-template-columns:repeat(2,1fr);}}
+.tbm-karte{border-left:5px solid var(--tbm-c,var(--green));}
+.tbm-karte.tbm-erledigt,.tbm-station.tbm-erledigt{background:var(--green-soft);}
+.tbm-nr{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--forest);color:var(--paper);font:700 .8rem system-ui,sans-serif;margin-right:8px;vertical-align:2px;}
+.tbm-stufen,.tbm-chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;}
+.tbm-stufe,.tbm-chip{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 12px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit;}
+.tbm-stufe[aria-pressed="true"],.tbm-chip[aria-pressed="true"]{background:var(--forest);border-color:var(--forest);color:var(--paper);}
+.tbm-stufe:disabled{cursor:default;opacity:.75;}
+.tbm-jetzt{background:var(--orange-soft);border-radius:var(--radius);padding:10px 12px;margin:10px 0;}
+.btn.tbm-ok{background:var(--green-soft);border-color:var(--green);color:var(--forest);}
+.tbm-voll{margin-top:10px;}
+.tbm-voll>summary{cursor:pointer;font-weight:700;font-size:.88rem;color:var(--blue);padding:6px 0;}
+.tbm-voll>.bib-card{margin-top:8px !important;}
+.tbm-stationen{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-top:8px;}
+.tbm-station{border:1px solid var(--line);border-radius:var(--radius-lg);padding:12px;background:var(--card);display:flex;flex-direction:column;gap:4px;}
+.tbm-station-kopf{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.tbm-problemgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px;margin-top:8px;}
+.tbm-problemgrid .tbm-chip{border-radius:10px;text-align:left;padding:9px 11px;}
+.tbm-frage{margin:0;}
+</style>
+</head>
 <body>
 <div class="shell" id="app">
 <header class="top">
@@ -233,6 +266,7 @@ main,.app,#content{max-width:var(--ux-content-max);margin-left:auto;margin-right
 </div>
 </div>
 <div class="team-switch">
+<div class="ansicht-switch" role="group" aria-label="Ansicht wählen" title="Alltag: nur die Bereiche für das tägliche Üben · Staffel: alle Bereiche inkl. Prüfungsordnungen, Helfer und Ausbilder"><button type="button" data-ansicht="alltag" aria-pressed="false">Alltag</button><button type="button" data-ansicht="staffel" aria-pressed="true">Staffel</button></div>
 <select id="teamSwitcher" title="Team wechseln"></select>
 <button class="icon-btn" id="btnNeuesTeam" title="Neues Team anlegen">+</button>
 </div>
@@ -249,6 +283,7 @@ main,.app,#content{max-width:var(--ux-content-max);margin-left:auto;margin-right
 <button class="btn primary" data-goto="profil">Team anlegen / bearbeiten</button>
 </div>
 </div>
+<div id="startOffeneUebungen"></div>
 <div id="startNaechsteSchritte"></div>
 <details class="ux-disclosure"><summary>So liest du eine Übungskarte</summary>
 <div class="card-head"><span class="tag">einmal verstehen, überall wiederverwenden</span></div>
@@ -278,7 +313,7 @@ main,.app,#content{max-width:var(--ux-content-max);margin-left:auto;margin-right
 <button class="modul-tile" data-goto="helferschulung"><span class="num">Helferschulung</span><b>Die Versteckperson gut vorbereiten</b><span class="muted" style="font-size:.82rem;">Rolle, Sicherheit, Steigerung</span></button>
 <button class="modul-tile" data-goto="truemmeraufbau"><span class="num">Trümmeraufbau</span><b>Vom Flächen- zum Trümmerhund</b><span class="muted" style="font-size:.82rem;">Aufbaustufen · nur Sparte Trümmer</span></button>
           <button class="modul-tile" data-goto="mental-truemmer"><span class="num">Trümmer &amp; mentale Stärke</span><b>Selbstständig, präzise, belastbar</b><span class="muted" style="font-size:.82rem;">Geruch · Mikrolokalisierung · Distanz · Dunkelheit · Resilienz</span></button><button class="modul-tile" data-goto="mantrailing"><span class="num">Mantrailing</span><b>Vom Geruchsartikel zum einsatznahen Trail</b><span class="muted" style="font-size:.82rem;">Start · Entscheidungen · Negativ · Differenzierung · HF-Handling</span></button>
-<button class="modul-tile" data-goto="uebungsrad"><span class="num">Neu · Übungsrad</span><b>435 Übungen zum Selbst-Üben</b><span class="muted" style="font-size:.82rem;">Glücksrad · 33 Themen · Lösungen · Tagebuch</span></button>
+<button class="modul-tile" data-goto="uebungsrad"><span class="num">Neu · Training</span><b>Glücksrad, Trainingseinheit, Abenteuer, Problem angehen</b><span class="muted" style="font-size:.82rem;">Übungen ausgeben lassen · abhaken · Tagebuch</span></button>
 <button class="modul-tile" data-goto="bibliothek"><span class="num">Neu · Übungsbibliothek</span><b>Über 700 Übungen</b><span class="muted" style="font-size:.82rem;">BARRY-Datenstand · Filter nach Kategorie, Sparte, Suche</span></button>
 <button class="modul-tile" data-goto="lernalltag"><span class="num">Neu · Lernen &amp; Alltag</span><b>Schlaf, Sicherheit, Emotion</b><span class="muted" style="font-size:.82rem;">Forschungsstand · Hundetypen · Einsatzunterkunft</span></button>
 <button class="modul-tile" data-goto="truemmeraufbau"><span class="num">Neu · Trümmersuche</span><b>Anzeige, Trainingssuche, Taktik</b><span class="muted" style="font-size:.82rem;">17 Übungen · Grob-/Feinsuche · Dunkelheit · Wind</span></button>
@@ -292,6 +327,15 @@ main,.app,#content{max-width:var(--ux-content-max);margin-left:auto;margin-right
 </section>
 <section class="view" id="view-uebungsrad">
 <div class="stack">
+<div class="intro-card tbm-kopf">
+<h2>Training</h2>
+<p>Wie sollen die Übungen heute ausgegeben werden?</p>
+<div class="tbm-modus" role="tablist" aria-label="Art der Übungsausgabe"><button type="button" role="tab" data-tbm="rad" aria-selected="true"><span>🎡</span>Glücksrad</button><button type="button" role="tab" data-tbm="einheit" aria-selected="false"><span>📋</span>Trainingseinheit</button><button type="button" role="tab" data-tbm="abenteuer" aria-selected="false"><span>🎒</span>Abenteuer</button><button type="button" role="tab" data-tbm="problem" aria-selected="false"><span>🔍</span>Problem angehen</button></div>
+<p class="muted tbm-erkl" id="tbmErklaerung"></p>
+<div id="tbmOffenHinweis"></div>
+<p class="muted" style="font-size:.8rem;margin-top:6px;">Stand für Team: <b id="tbmTeam">–</b> · Übungen gelten erst als erledigt, wenn du sie nach dem Training abhakst.</p>
+</div>
+<div id="tbmRad" class="stack">
 <div class="intro-card">
 <h2>Übungsrad</h2>
 <p>435 Übungen zu 33 Themen – allein, mit Hund, als Helfer oder in der Gruppe. Das Rad wählt passend zu Zeit und Themen aus.</p>
@@ -301,6 +345,10 @@ main,.app,#content{max-width:var(--ux-content-max);margin-left:auto;margin-right
 <p class="muted" style="font-size:.8rem;margin-top:8px;">Stand für Team: <b id="uebungsradTeam">–</b> · in der Vollsicherung enthalten</p>
 </div>
 <div id="uebungsradHost"></div>
+</div>
+<div id="tbmEinheit" class="stack" hidden></div>
+<div id="tbmAbenteuer" class="stack" hidden></div>
+<div id="tbmProblem" class="stack" hidden></div>
 </div>
 </section>
 <section class="view" id="view-profil">
@@ -908,7 +956,7 @@ main,.app,#content{max-width:var(--ux-content-max);margin-left:auto;margin-right
 <option value="pruefung">Prüfung / Übungsprüfung</option>
 <option value="einsatz">Einsatz</option>
 <option value="bibliothek">Übungsbibliothek</option>
-<option value="uebungsrad">Übungsrad</option>
+<option value="uebungsrad">Übungsrad</option><option value="trainingseinheit">Trainingseinheit</option><option value="abenteuer">Abenteuer-Spaziergang</option>
 <option value="lernalltag">Lernen, Schlaf &amp; Alltag</option>
 <option value="einsatzunterkunft">Einsatzunterkunft &amp; Bereitstellung</option>
 <option value="bonus">Bonus-Einsatzfelder</option>
@@ -1038,10 +1086,19 @@ function showStorageWarning(message){
   let box = document.getElementById('storageWarning');
   if(!box){
     box = document.createElement('div'); box.id='storageWarning'; box.setAttribute('role','alert');
-    box.style.cssText='position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;background:#fff3cd;border:1px solid #d6b85c;border-radius:10px;padding:12px 14px;box-shadow:0 4px 18px rgba(0,0,0,.18);font-size:.9rem;';
+    box.style.cssText='position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;background:#fff3cd;color:#3d2e00;border:1px solid #d6b85c;border-radius:10px;padding:12px 44px 12px 14px;box-shadow:0 4px 18px rgba(0,0,0,.18);font-size:.9rem;line-height:1.45;';
     document.body.appendChild(box);
   }
-  box.textContent = message || 'Speichern fehlgeschlagen – bitte freien Speicherplatz und Browser-Einstellungen prüfen.';
+  /* v2.32.0: lesbar im Dunkelmodus, schließbar, eigener Text, wenn der Browser Speichern grundsätzlich nicht erlaubt (z. B. Dateivorschau, privates Fenster) */
+  let gesperrt = false; try{ const k='tbrh:test'; localStorage.setItem(k,'1'); localStorage.removeItem(k); }catch(e){ gesperrt = (e && e.name!=='QuotaExceededError' && e.code!==22); }
+  const text = message || (gesperrt
+    ? 'Speichern ist hier nicht möglich: Dieser Browser bzw. diese Vorschau erlaubt der App keinen Gerätespeicher. Bitte die App über ihre Internetadresse öffnen (nicht als Dateivorschau oder im privaten Fenster) – sonst gehen Eingaben beim Schließen verloren.'
+    : 'Speichern fehlgeschlagen – bitte freien Speicherplatz und Browser-Einstellungen prüfen.');
+  box.innerHTML = '';
+  const t = document.createElement('div'); t.textContent = text; box.appendChild(t);
+  const x = document.createElement('button'); x.type='button'; x.textContent='×'; x.setAttribute('aria-label','Hinweis schließen');
+  x.style.cssText='position:absolute;top:6px;right:8px;border:0;background:none;color:#3d2e00;font-size:1.4rem;line-height:1;cursor:pointer;padding:4px 8px;';
+  x.onclick = ()=>box.remove(); box.appendChild(x);
 }
 function lsSet(key, val){
   try{ localStorage.setItem(key, JSON.stringify(val)); return true; }
@@ -2729,7 +2786,7 @@ function renderTruemmeraufbau(){
   }
 }
 /* ============================== View: Trainingstagebuch ============================== */
-const TAGEBUCH_BEREICH_LABEL = {findewille:'Finde- & Anzeigewille', anzeigeaufbau:'Anzeigeaufbau', drk11:'DRK 1.1', drk12:'DRK 1.2', drk13:'DRK 1.3', vdh:'VDH BH-VT', truemmer:'Trümmeraufbau', flaeche:'Flächensuche', truemmersuche:'Trümmersuche', mantrailing:'Mantrailing', pruefung:'Prüfung / Übungsprüfung', einsatz:'Einsatz', bibliothek:'Übungsbibliothek', uebungsrad:'Übungsrad', lernalltag:'Lernen, Schlaf & Alltag', einsatzunterkunft:'Einsatzunterkunft & Bereitstellung', bonus:'Bonus-Einsatzfelder', geraete:'Gerätearbeit & Trümmervorbereitung', sonstiges:'Sonstiges'};
+const TAGEBUCH_BEREICH_LABEL = {findewille:'Finde- & Anzeigewille', anzeigeaufbau:'Anzeigeaufbau', drk11:'DRK 1.1', drk12:'DRK 1.2', drk13:'DRK 1.3', vdh:'VDH BH-VT', truemmer:'Trümmeraufbau', flaeche:'Flächensuche', truemmersuche:'Trümmersuche', mantrailing:'Mantrailing', pruefung:'Prüfung / Übungsprüfung', einsatz:'Einsatz', bibliothek:'Übungsbibliothek', uebungsrad:'Übungsrad', trainingseinheit:'Trainingseinheit', abenteuer:'Abenteuer-Spaziergang', lernalltag:'Lernen, Schlaf & Alltag', einsatzunterkunft:'Einsatzunterkunft & Bereitstellung', bonus:'Bonus-Einsatzfelder', geraete:'Gerätearbeit & Trümmervorbereitung', sonstiges:'Sonstiges'};
 function renderRadioScale(container, name, max){
   max = max||5;
   container.setAttribute('role','radiogroup');
@@ -2924,6 +2981,7 @@ function buildStartPersonalisierungHtml(t, monate, phase){
   return '<div class="card" style="margin-top:14px;"><div class="card-head"><h3>Individuell für '+esc(teamDisplayName(t)||'euer Team')+'</h3><span class="tag">Rasse · Lebensphase · Entwicklungsthemen</span></div>'+parts.join('')+'</div>';
 }
 function renderStart(){
+  if(typeof tbStartOffen==='function') tbStartOffen();
   const t = activeTeam();
   const el = document.getElementById('startNaechsteSchritte');
   if(!t || (!t.handler && !t.dog)){
@@ -2950,7 +3008,7 @@ function renderStart(){
 /* ============================== Navigation ============================== */
 const TABS_ALL = [
   {id:'start', label:'Start'},
-  {id:'uebungsrad', label:'Übungsrad'},
+  {id:'uebungsrad', label:'Training'},
   {id:'profil', label:'Profil'},
   {id:'findewille', label:'Finde- & Anzeigewille'},
   {id:'anzeigeaufbau', label:'Anzeigeaufbau'},
@@ -2983,11 +3041,22 @@ const TABS_ALL = [
 function currentTabs(){
   const t = activeTeam();
   const verband = t ? (t.verband||'drk_hessen') : 'drk_hessen';
-  return TABS_ALL.filter(x=> !x.verband || x.verband===verband);
+  const alltag = tbAnsicht()==='alltag';
+  return TABS_ALL.filter(x=> (!x.verband || x.verband===verband) && (!alltag || TB_ALLTAG_TABS.includes(x.id)));
+}
+/* v2.32.0: Ansicht „Alltag“ (nur Bereiche für das tägliche Üben) oder „Staffel“ (alle Bereiche). Nur Darstellung – keine Daten werden getrennt oder gelöscht. */
+const TB_ALLTAG_TABS = ['start','uebungsrad','profil','bibliothek','lernalltag','tagebuch'];
+function tbAnsicht(){ return (state && state.ansicht==='alltag') ? 'alltag' : 'staffel'; }
+function tbAnsichtAnwenden(){
+  const a = tbAnsicht();
+  document.querySelectorAll('[data-ansicht]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.ansicht===a ? 'true':'false'));
+  const sichtbar = new Set(currentTabs().map(x=>x.id));
+  document.querySelectorAll('#view-start .modul-tile[data-goto]').forEach(k=>{ k.hidden = !sichtbar.has(k.dataset.goto); });
 }
 function renderTabs(){
   document.getElementById('tabs').innerHTML = currentTabs().map(t=>'<button class="tab" id="tab-'+t.id+'" data-tab="'+t.id+'" role="tab" aria-controls="view-'+t.id+'" aria-selected="false">'+esc(t.label)+'</button>').join('');
   document.querySelectorAll('.view').forEach(v=>{ v.setAttribute('role','tabpanel'); const id=v.id.replace('view-',''); v.setAttribute('aria-labelledby','tab-'+id); });
+  tbAnsichtAnwenden();
 }
 let historyReady = false;
 function showView(id, opts){
@@ -3078,6 +3147,14 @@ function init(){
     if(tabBtn){ showView(tabBtn.dataset.tab); return; }
     const gotoBtn = e.target.closest('[data-goto]');
     if(gotoBtn){ showView(gotoBtn.dataset.goto); return; }
+    const ansBtn = e.target.closest('[data-ansicht]');
+    if(ansBtn){
+      state.ansicht = ansBtn.dataset.ansicht==='alltag' ? 'alltag' : 'staffel'; saveState();
+      renderTabs();
+      showView(currentTabs().some(t=>t.id===state.lastView) ? state.lastView : 'start');
+      showInfoToast(state.ansicht==='alltag' ? 'Ansicht „Alltag“: nur die Bereiche für das tägliche Üben.' : 'Ansicht „Staffel“: alle Bereiche werden angezeigt.');
+      return;
+    }
     const symptomBtn = e.target.closest('[data-symptom]');
     if(symptomBtn){ renderFehlerDetail(symptomBtn.dataset.symptom); return; }
   });
@@ -4254,6 +4331,7 @@ function wireBibliothek(){
 function rerenderBibKontext(){
   const v=state.lastView;
   if(v==='bibliothek'){ const open=[...document.querySelectorAll('#bibListe details[open]')].map(d=>d.querySelector('[data-bib-toggle]')?.dataset.bibToggle); renderBibliothek(); open.forEach(id=>{const btn=document.querySelector(`#bibListe [data-bib-toggle="${CSS.escape(id||'')}"]`); if(btn) btn.closest('details').open=true;}); }
+  else if(v==='uebungsrad' && typeof tbmRender==='function') tbmRender(false);
   else if(v==='lernalltag') renderLernalltag(); else if(v==='bonus') renderBonus(); else if(v==='geraete') renderGeraete();
 }
 function tbKarten(cats){
@@ -4711,6 +4789,8 @@ window.UEM_DATA=[{"modul":"K01","titel":"Im Sinne der Hunde","bereich":"Kynologi
    - anrede: 'sie' (Standard) oder 'du' für die Bedienoberfläche (die Übungstexte kommen aus den Daten)
    - anzeigeart: optionale Funktion, die die Anzeigeart des Teams liefert (z. B. 'verbeller', 'bringsel', 'freiverweiser',
      'rueckverweiser', 'pendler'); passt die Auswahl an (Übungen für andere Anzeigearten ausblenden, Bringsel-Material weglassen)
+   Stand 4 (1.1.0): Offene Übung – die zuletzt gezogene Übung wird als „offen“ gemerkt (store-Schlüssel 'offen'), bis sie
+     abgehakt oder ausdrücklich verworfen wird. Beim nächsten Öffnen erscheint sie wieder mit Rückfrage. API: offen().
    Stand 3: Filter „Helfer bzw. Versteckperson dabei“ (Übungen mit Hund, die eine zweite Person brauchen), Anzeigeart des Teams.
    Stand 2: Ort-Filter (drinnen bei Schlechtwetter), Ausbilder-Regel „Erst mit Ausbilder – danach privat nach Absprache“ */
 (function (global) {
@@ -4812,6 +4892,7 @@ color:var(--uem-ink);font-size:16px;line-height:1.5;max-width:760px;margin:0 aut
     if (!document.getElementById('uem-style')) { var st = document.createElement('style'); st.id = 'uem-style'; st.textContent = CSS; document.head.appendChild(st); }
     var done = store.get('done', {}) || {};
     var notes = store.get('notes', {}) || {};
+    var offen = store.get('offen', null);
     var themen = store.get('themen', null);
     if (!themen) { themen = {}; DATA.forEach(function (m) { themen[m.modul] = true; }); }
     var ALL = []; DATA.forEach(function (m) { m.uebungen.forEach(function (u) { ALL.push({ u: u, m: m }); }); });
@@ -4912,11 +4993,38 @@ color:var(--uem-ink);font-size:16px;line-height:1.5;max-width:760px;margin:0 aut
         r.querySelector('[data-go]').onclick = function () {
           var all = Array.prototype.every.call(r.querySelectorAll('input'), function (i) { return i.checked; });
           if (!all) { r.querySelector('h3').textContent = 'Bitte alle Punkte bestätigen – sonst heute eine Übung ohne Hund wählen.'; return; }
-          r.innerHTML = card(s.u, s.m, true);
+          r.innerHTML = card(s.u, s.m, true); merkeOffen(s.u);
         };
         r.querySelector('[data-alt]').onclick = function () { delete F.art.hund; q('[data-f=art] [data-v=hund]').setAttribute('aria-pressed', 'false'); prepare(); r.innerHTML = '<p class="uem-empty">' + T('Übungen mit Hund sind für heute ausgeblendet. Drehen Sie noch einmal.', 'Übungen mit Hund sind für heute ausgeblendet. Dreh noch einmal.') + '</p>'; };
-      } else r.innerHTML = card(s.u, s.m, true);
+      } else { r.innerHTML = card(s.u, s.m, true); merkeOffen(s.u); }
       if (r.scrollIntoView) r.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    function datum(iso) { var d = new Date(iso); return isNaN(d) ? '' : String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear(); }
+    function merkeOffen(u) { if (done[u.id]) return; offen = { id: u.id, am: new Date().toISOString() }; store.set('offen', offen); }
+    function loescheOffen() { offen = null; store.set('offen', null); }
+    // Rückfrage zur offenen Übung bei jedem Öffnen des Rads (Start der App oder erneutes Öffnen des Reiters)
+    function erinnere() {
+      if (!offen) return;
+      var x = find(offen.id);
+      if (!x || done[offen.id]) { loescheOffen(); return; }
+      var r = q('[data-res]');
+      if (r.querySelector('.uem-offen')) return;
+      r.innerHTML = '<div class="uem-check uem-offen"><h3>' + T('Offene Übung vom ', 'Offene Übung vom ') + esc(datum(offen.am)) + '</h3>\
+<p style="margin:0 0 6px"><strong>' + esc(x.u.id) + ' · ' + esc(x.u.titel) + '</strong></p>\
+<p class="uem-note">' + T('Diese Übung wurde gezogen, aber noch nicht abgehakt. Haben Sie sie durchgeführt?', 'Diese Übung wurde gezogen, aber noch nicht abgehakt. Hast du sie durchgeführt?') + '</p>\
+<div class="uem-btnrow" style="margin-top:10px"><button class="uem-btn primary" data-offen="ja">' + T('Ja, durchgeführt – abhaken', 'Ja, durchgeführt – abhaken') + '</button>\
+<button class="uem-btn" data-offen="zeigen">' + T('Noch nicht – Übung anzeigen', 'Noch nicht – Übung anzeigen') + '</button>\
+<button class="uem-btn" data-offen="nein">' + T('Nicht durchgeführt – verwerfen', 'Nicht durchgeführt – verwerfen') + '</button></div></div>';
+    }
+    function offenAntwort(a) {
+      var x = offen && find(offen.id), r = q('[data-res]'); if (!x) { r.innerHTML = ''; return; }
+      if (a === 'ja') {
+        done[x.u.id] = new Date().toISOString(); store.set('done', done); loescheOffen();
+        r.innerHTML = '<p class="uem-note">✓ ' + esc(x.u.id) + ' ' + T('ist als erledigt abgehakt.', 'ist als erledigt abgehakt.') + '</p>' + card(x.u, x.m, true);
+        if (opt.onDone) try { opt.onDone(x.u, x.m, true, notes[x.u.id] || ''); } catch (err) {}
+      } else if (a === 'zeigen') { r.innerHTML = card(x.u, x.m, true); }
+      else { loescheOffen(); r.innerHTML = '<p class="uem-empty">' + T('Die Übung wurde verworfen. Drehen Sie das Rad für eine neue Übung.', 'Die Übung wurde verworfen. Dreh das Rad für eine neue Übung.') + '</p>'; }
+      renderMein();
     }
     function card(u, m, fromWheel) {
       var facts = [u.dauer, u.teilnehmende].filter(Boolean).map(esc).join(' · ');
@@ -4967,6 +5075,7 @@ color:var(--uem-ink);font-size:16px;line-height:1.5;max-width:760px;margin:0 aut
       if (th) { var k = th.getAttribute('data-them'); themen[k] = !themen[k]; store.set('themen', themen); th.setAttribute('aria-pressed', !!themen[k]); prepare(); return; }
       var all = e.target.closest('[data-all]');
       if (all) { var val = all.getAttribute('data-all') === '1'; DATA.forEach(function (m) { themen[m.modul] = val; }); store.set('themen', themen); renderMein(); prepare(); return; }
+      var ob = e.target.closest('[data-offen]'); if (ob) { offenAntwort(ob.getAttribute('data-offen')); return; }
       if (e.target.closest('.uem-spin') || e.target.closest('.uem-hub')) { spin(); return; }
       var op = e.target.closest('[data-open]');
       if (op) { var x = find(op.getAttribute('data-open')); var d = q('[data-detail]'); d.innerHTML = card(x.u, x.m, false); if (d.scrollIntoView) d.scrollIntoView({ behavior: 'smooth' }); return; }
@@ -4978,7 +5087,7 @@ color:var(--uem-ink);font-size:16px;line-height:1.5;max-width:760px;margin:0 aut
         if (!b.getAttribute('data-armed')) { b.setAttribute('data-armed', '1'); b.textContent = 'Ich habe die Aufgabe bearbeitet – zeigen'; box.querySelector('[data-sol]').innerHTML = '<p class="uem-gate">Erst eine eigene Antwort notieren, dann vergleichen.</p>'; }
         else { var l = u.u.loesung; box.querySelector('[data-sol]').innerHTML = '<div class="uem-solution uem-sec"><h4>Lösung</h4>' + numbered(l.ergebnis) + ((l.loesungsweg || []).length ? '<h4 style="margin-top:8px">Lösungsweg</h4>' + list(l.loesungsweg, 'ol') : '') + '</div>'; b.remove(); }
       }
-      else if (act === 'done') { var was = !!done[u.u.id]; if (was) delete done[u.u.id]; else done[u.u.id] = new Date().toISOString(); store.set('done', done); b.classList.toggle('done', !was); b.textContent = !was ? '✓ Erledigt' : 'Als erledigt markieren'; if (opt.onDone) try { opt.onDone(u.u, u.m, !was, notes[u.u.id] || ''); } catch (err) {} }
+      else if (act === 'done') { var was = !!done[u.u.id]; if (was) delete done[u.u.id]; else { done[u.u.id] = new Date().toISOString(); if (offen && offen.id === u.u.id) loescheOffen(); } store.set('done', done); b.classList.toggle('done', !was); b.textContent = !was ? '✓ Erledigt' : 'Als erledigt markieren'; if (opt.onDone) try { opt.onDone(u.u, u.m, !was, notes[u.u.id] || ''); } catch (err) {} }
       else if (act === 'again') { prepare(); spin(); }
     });
     root.addEventListener('change', function (e) {
@@ -5009,16 +5118,17 @@ color:var(--uem-ink);font-size:16px;line-height:1.5;max-width:760px;margin:0 aut
       q('[data-themen]').innerHTML = DATA.map(function (m) { return '<button class="uem-chip" data-them="' + esc(m.modul) + '" aria-pressed="' + !!themen[m.modul] + '" title="' + esc(m.titel) + '">' + esc(m.modul) + ' · ' + esc(m.titel.split(' – ')[0]) + '</button>'; }).join('');
     }
     q('[data-donelist]').addEventListener('click', function (e) { var op = e.target.closest('[data-open]'); if (!op) return; e.stopPropagation(); var x = find(op.getAttribute('data-open')); var tb = root.querySelector('[data-t=themen]'); tb.click(); modsel.value = x.m.modul; renderList(); q('[data-detail]').innerHTML = card(x.u, x.m, false); });
-    prepare(); renderMein();
+    prepare(); renderMein(); erinnere();
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(draw);
-    return { refresh: function () { root.classList.toggle('uem-dark', isDark()); prepare(); }, state: function () { return { done: done, notes: notes, themen: themen }; } };
+    return { refresh: function () { root.classList.toggle('uem-dark', isDark()); prepare(); }, erinnern: function () { erinnere(); }, state: function () { return { done: done, notes: notes, themen: themen, offen: offen }; },
+      offen: function () { var x = offen && !done[offen.id] && find(offen.id); return x ? { id: x.u.id, titel: x.u.titel, am: offen.am } : null; } };
   }
-  global.UEM = { mount: mount, version: '1.0.0' };
+  global.UEM = { mount: mount, version: '1.1.0' };
 })(window);
 </script>
 <script id="uem-einbindung">
 /* ============================== v2.28.0/2.29.0: Übungsrad – Einbindung des Übungsmoduls (Stand 09.10.2026) ==============================
-   Speicher: je Team unter team.uebungsrad = {done, notes, themen, updatedAt}. Damit läuft der Stand automatisch in
+   Speicher: je Team unter team.uebungsrad = {done, notes, themen, offen, updatedAt} (offen seit v2.32.0). Damit läuft der Stand automatisch in
    Gerätespeicher (localStorage + IndexedDB-Spiegel) und in der Vollsicherung mit. Ältere Sicherungen ohne dieses Feld
    bleiben gültig: fehlt es, startet das Übungsrad mit leerem Stand. Das RHS-Exchange-Teampaket bleibt unverändert. */
 let uemHost = null;
@@ -5041,8 +5151,9 @@ function renderUebungsrad(){
   if(!window.UEM || !Array.isArray(window.UEM_DATA)){ host.innerHTML = '<p class="muted">Das Übungsrad konnte nicht geladen werden.</p>'; return; }
   const t = activeTeam();
   const info = document.getElementById('uebungsradTeam');
+  if(typeof tbmRender==='function') tbmRender(true);
   if(info) info.textContent = t ? (teamDisplayName(t) || ('Team '+(state.teams.indexOf(t)+1))) : '–';
-  if(uemHost && uemHost.team === t && host.contains(uemHost.el)){ uemHost.api.refresh(); return; }
+  if(uemHost && uemHost.team === t && host.contains(uemHost.el)){ uemHost.api.refresh(); if(uemHost.api.erinnern) uemHost.api.erinnern(); if(typeof tbmBadges==='function') tbmBadges(); return; }
   host.innerHTML = '';
   const el = document.createElement('div'); host.appendChild(el);
   const api = UEM.mount(el, {
@@ -5051,6 +5162,7 @@ function renderUebungsrad(){
     onDone: (u, m, erledigt, notiz)=>uemTagebuchAngebot(el, u, m, erledigt, notiz)
   });
   uemHost = {team:t, api, el};
+  if(typeof tbmBadges==='function') tbmBadges();
 }
 /* Rückfrage im Modul-Stil (kein confirm): Tagebucheintrag in der vorhandenen Struktur team.tagebuch[] */
 function uemTagebuchAngebot(root, u, m, erledigt, notiz){
@@ -5122,6 +5234,425 @@ try{
   if(mq){ if(mq.addEventListener) mq.addEventListener('change', neu); else if(mq.addListener) mq.addListener(neu); }
   new MutationObserver(neu).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme','class']});
 }catch(e){}
+</script>
+<script id="tb-training">
+/* ============================== v2.32.0: Reiter „Training“ – Glücksrad | Trainingseinheit | Abenteuer | Problem angehen ==============================
+   Speicher je Team: team.trainingHeute = {modus, einstellungen:{schwerpunkt, anzahl, stufe, abenteuerArt}, einheit, abenteuer, geuebt:{id:ISO}, verlauf:[]}
+   Grundsatz: Eine Übung gilt erst als erledigt, wenn sie nach der Durchführung abgehakt wurde. Offene Übungen werden beim nächsten
+   Öffnen der App (Startseite) bzw. des Reiters erneut gezeigt und nachgefragt.
+   Trainingseinheit, Abenteuer-Stationen und Problem-Themen entsprechen dem Pfotenalltag v2.9; Übungsbestand = Übungsbibliothek (BARRY).
+   Das Glücksrad zieht unverändert nur aus den Übungen des Ausbildungspakets (UEM_DATA). Ältere Sicherungen ohne trainingHeute bleiben gültig. */
+const TBM_MODI = ['rad','einheit','abenteuer','problem'];
+const TBM_LEVEL = {1:'Aufbau',2:'Festigung',3:'Alltag/Prüfungsnähe'};
+const TBM_GRUPPEN = ['Übungen','Grundprogramm','Impulskontrolle','Prüfung','Staffel/Team','BARRY 2.40 · Lernen & Forschung'];
+const TBM_RH_CATS = new Set(['verhalten','anzeige','flaeche','truemmer','geraete','mantrail','hf','opferbild','szenario','funkorient','pruefung']);
+const TBM_SPEZIAL_CATS = new Set(['dummy','wesenstest','listenhund','welpen','senior']);
+const TBM_ANZ = {verbeller:'verbeller', pendler:'rv_pendeln', rueckverweiser:'rv_leine', bringsel:'bringsler', freiverweiser:''};
+const TBM_ERKL = {
+  rad:'Das Glücksrad zieht einzelne Übungen aus dem Ausbildungspaket (435 Übungen) – allein, mit Hund, als Helfer oder in der Gruppe.',
+  einheit:'Stellt aus dem Hundetrainings-Bestand eine abwechslungsreiche Einheit mit 3 bis 8 Übungen zusammen – passend zu Schwerpunkt, Stufe, Sparte und Anzeigeart deines Teams.',
+  abenteuer:'Macht einen normalen Spaziergang zur gemeinsamen Entdeckungszeit: sechs Stationen – freiwillig, sicher und kurz.',
+  problem:'Wähle ein Alltagsthema. Die App zeigt passende Übungen, die du in deine Trainingseinheit übernehmen kannst.'
+};
+const TBM_ABENTEUER_ARTEN = [['sanft','Sanft & sicher'],['bunt','Bunter Mix'],['mut','Mut & Körpergefühl'],['nase','Nase & Entdecken']];
+/* Stationen und Problem-Themen wortgleich aus Pfotenalltag v2.9 */
+const TBM_ABENTEUER = [
+{t:"Schnüffel-Schatz",tags:["sanft","bunt","nase"],d:"3–5 kleine Futterstücke oder ein Spielzeug in einem sicheren kleinen Bereich suchen lassen."},
+{t:"Natur-Balance",tags:["bunt","mut"],d:"Eine niedrige, breite, stabile Naturfläche freiwillig erkunden: Paws-up oder langsam darüber."},
+{t:"Mut-Insel",tags:["sanft","mut"],d:"Etwas Unbekanntes aus Wohlfühldistanz anschauen. Annäherung ist freiwillig; Weggehen ist erlaubt."},
+{t:"Neue Abzweigung",tags:["sanft","bunt"],d:"Eine kurze sichere unbekannte Abzweigung nehmen. Schnüffeln und Entdecken zählen mehr als Strecke."},
+{t:"Parkbank-Teamspiel",tags:["bunt","mut"],d:"An einer stabilen Bank: umrunden, Handtouch, Paws-up oder eine eigene sichere Idee."},
+{t:"Wildnis-Pause",tags:["sanft","bunt"],d:"30–90 Sekunden gemeinsam beobachten und schnüffeln. Keine starre Position verlangen."},
+{t:"Pfoten-Puzzle",tags:["bunt","mut"],d:"Drei flache rutschfeste Bodenpunkte nacheinander freiwillig erkunden."},
+{t:"Nasen-Wahl",tags:["sanft","nase"],d:"An einer sicheren Gabelung schnüffeln lassen und, wenn beide Wege sicher sind, kurz mitentscheiden lassen."},
+{t:"Baum umrunden",tags:["bunt","mut"],d:"Einen Baum in beide Richtungen ruhig umrunden – erst gemeinsam, später selbstständiger."},
+{t:"Geräusche entdecken",tags:["sanft","mut"],d:"Ein Alltagsgeräusch aus angenehmer Distanz wahrnehmen, schnüffeln/Futter erlauben und rechtzeitig wieder weggehen."},
+{t:"Mini-Futterspur",tags:["sanft","nase"],d:"Eine sehr kurze Futterspur im Gras – ohne Perfektionsanspruch, nur als gemeinsames Nasenspiel."},
+{t:"Gemeinsamer Sprint & Ruhe",tags:["bunt"],d:"Wenn gesundheitlich passend: wenige Sekunden gemeinsam flott, danach wieder ruhig gehen und schnüffeln."}];
+const TBM_PROBLEME = [
+ {t:'Zieht an der Leine',r:/leinenf|an der leine|lockere?n? leine|freifolge|leinenführ/i},{t:'Kommt nicht zurück',r:/rückruf|abruf|notstopp|herankomm/i},
+ {t:'Springt Menschen an',r:/anspring|springt (an|hoch)/i,n:/ohne anspringen/i},{t:'Bellt viel',r:/bell|klingel|tür|ruhig/i},
+ {t:'Kommt nicht zur Ruhe',r:/ruhe|entspann|decke|matte|gelassen|abschalt/i},{t:'Ängstlich / unsicher',r:/angst|unsicher|selbstsicher|mut|geräusch|untergr/i},{t:'Schüchtern / wenig Selbstvertrauen',r:/schüchtern|selbstvertrauen|selbstwirksam|mut-|wohlfühl|entdecker|zustimmungsspiel/i},{t:'Älterer Hund / Reha',r:/senior|reha|rampe|gelenk|boxenruhe/i},{t:'Maulkorb & Pfotenschuhe',r:/maulkorb|pfotenschuh|hundeschuh|schutzbody/i},{t:'Regentag / drinnen beschäftigen',r:/regen|indoor|karton|becher|handtuch|muffin/i},{t:'Verteidigt Futter, Platz oder Spielzeug',r:/ressourc|verteidig|knurr|durchsetzungs|tauschgesch|liegeplatz räumen/i},{t:'Fordert ständig ein / lenkt den Menschen',r:/einfordern|einforder|anstupsen|unbewusst|hausregeln|wer startet/i},{t:'Angst vor Knall & Silvester',r:/silvester|knall|feuerwerk|böller|gewitter/i},
+ {t:'Jagt / lässt sich ablenken',r:/jag|wild|impuls|ablenk|reiz|frustrat/i},{t:'Frisst alles vom Boden',r:/\baus\b|tausch|liegen lassen|abbruch|futter vom boden|nimm/i},
+ {t:'Bleibt nicht gern allein',r:/alleinbleib|alleinsein|allein (bleiben|lassen|sein|zu hause)|kurze trennung|trennungs/i},{t:'Stress bei Pflege & Tierarzt',r:/tierarzt|pflege|kralle|bürst|körpercheck|kooperat|medical/i},
+ {t:'Langweilt sich',r:/nasen|such|denk|beschäftig|intelligenz|schnüffel/i},{t:'Grundgehorsam festigen',r:/\bsitz|\bplatz|bleib|grundstellung|ablage/i}];
+let tbmFrage = {einheit:false, abenteuer:false};
+let tbmProblemAktiv = null;
+let tbmKommentarTimer = null;
+
+function tbmData(t){
+  t = t || activeTeam(); if(!t) return null;
+  if(!t.trainingHeute || typeof t.trainingHeute !== 'object') t.trainingHeute = {};
+  const d = t.trainingHeute;
+  if(!d.einstellungen || typeof d.einstellungen !== 'object') d.einstellungen = {};
+  if(!d.geuebt || typeof d.geuebt !== 'object') d.geuebt = {};
+  if(!Array.isArray(d.verlauf)) d.verlauf = [];
+  if(!TBM_MODI.includes(d.modus)) d.modus = 'rad';
+  return d;
+}
+function tbmDatum(iso){ const d = new Date(iso); return isNaN(d) ? '' : String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+d.getFullYear(); }
+function tbmMische(a){ a = a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function tbmRadOffen(t){ const u = t && t.uebungsrad; return !!(u && u.offen && u.offen.id && !((u.done||{})[u.offen.id])); }
+function tbmUemTitel(id){ let x=null; (window.UEM_DATA||[]).forEach(m=>(m.uebungen||[]).forEach(u=>{ if(!x && u.id===id) x=u; })); return x ? x.titel : ''; }
+
+/* ---------- Übungsbestand (wie Pfotenalltag: Kalender-, Grund-, Impuls-, Prüfungs- und Teamübungen) ---------- */
+function tbmPasst(u, sparten, anz){
+  const d = u.discipline || [];
+  if(d.length && sparten.length && !d.some(x=>sparten.includes(x))) return false;
+  const a = u.anzeige || [];
+  if(a.length && anz){ const m = TBM_ANZ[anz]; if(!m || !a.includes(m)) return false; }
+  return true;
+}
+function tbmPool(){
+  const t = activeTeam();
+  const sparten = activeSparten(t).map(x=>x==='mantrailing' ? 'mantrail' : x);
+  const anz = (t && t.anzeigeart) || '';
+  return bibLoad().pool.filter(u=>TBM_GRUPPEN.includes(u._gruppe) && Array.isArray(u.levels) && u.levels.length && tbmPasst(u, sparten, anz));
+}
+function tbmKategorien(pool){
+  const counts = {}; pool.forEach(u=>counts[u.cat]=(counts[u.cat]||0)+1);
+  const cats = Object.keys(bibLoad().cats).filter(k=>counts[k]);
+  return { counts,
+    alltag: cats.filter(k=>!TBM_RH_CATS.has(k) && !TBM_SPEZIAL_CATS.has(k)),
+    rh: cats.filter(k=>TBM_RH_CATS.has(k)),
+    spezial: cats.filter(k=>TBM_SPEZIAL_CATS.has(k)) };
+}
+function tbmStdSchwerpunkt(){ return tbAnsicht()==='alltag' ? 'mix_alltag' : 'mix_alle'; }
+function tbmSchwerpunktName(sw){
+  return ({mix_alltag:'Gemischt · Alltag & Grundlagen', mix_rh:'Gemischt · Rettungshundearbeit', mix_alle:'Gemischt · alles', problem:'Aus „Problem angehen“'})[sw] || bibCatName(sw);
+}
+function tbmGewicht(u, d){ const g = d.geuebt[u.id]; return (g && (Date.now()-new Date(g).getTime()) < 14*864e5) ? 1 : 3; }
+function tbmZiehe(liste, d, used){
+  const c = liste.filter(u=>!used.includes(u.id)); if(!c.length) return null;
+  let r = Math.random() * c.reduce((s,u)=>s+tbmGewicht(u,d), 0);
+  for(const u of c){ r -= tbmGewicht(u,d); if(r <= 0) return u; }
+  return c[c.length-1];
+}
+function tbmItem(u, stufe){ return {id:u.id, stufe:Math.min(Number(stufe)||1, u.levels.length), erledigt:null, kommentar:''}; }
+function tbmStelleZusammen(){
+  const d = tbmData(), e = d.einstellungen, pool = tbmPool(), n = Number(e.anzahl)||6, sw = e.schwerpunkt || tbmStdSchwerpunkt();
+  const used = [], items = [];
+  if(sw.startsWith('mix_')){
+    const k = tbmKategorien(pool), alter = currentAlterMonate();
+    let cats = sw==='mix_alltag' ? k.alltag : sw==='mix_rh' ? k.rh : k.alltag.concat(k.rh);
+    if(alter!==null && alter<12 && k.counts.welpen) cats = cats.concat('welpen');
+    if(alter!==null && alter>=96 && k.counts.senior) cats = cats.concat('senior');
+    for(let runde=0; runde<3 && items.length<n && cats.length; runde++){
+      for(const cat of tbmMische(cats)){
+        if(items.length>=n) break;
+        const u = tbmZiehe(pool.filter(x=>x.cat===cat), d, used);
+        if(u){ used.push(u.id); items.push(tbmItem(u, e.stufe)); }
+      }
+    }
+  } else {
+    const liste = pool.filter(x=>x.cat===sw);
+    for(let i=0;i<n;i++){ const u = tbmZiehe(liste, d, used); if(!u) break; used.push(u.id); items.push(tbmItem(u, e.stufe)); }
+  }
+  if(!items.length){ showInfoToast('Zu dieser Auswahl gibt es keine passenden Übungen.'); return; }
+  d.einheit = {id:uid(), erstellt:new Date().toISOString(), schwerpunkt:sw, items};
+  tbmFrage.einheit = false; saveState(); tbmRender(false);
+  const k = document.querySelector('#tbmEinheit .tbm-einheit-kopf'); if(k && k.scrollIntoView) k.scrollIntoView({behavior:'smooth', block:'start'});
+}
+function tbmProfilHinweis(){
+  const t = activeTeam(); if(!t) return '';
+  const sp = activeSparten(t).map(s=>SPARTE_LABEL[s]||s);
+  const anz = {verbeller:'Verbeller', pendler:'Pendler (Rückverweis mit Pendeln)', rueckverweiser:'Rückverweiser', freiverweiser:'Freiverweiser', bringsel:'Bringsel'}[t.anzeigeart] || '';
+  return ' · Profil: ' + (sp.length ? sp.join(', ') : 'keine Sparte gewählt') + (anz ? ' · Anzeigeart ' + anz : ' · Anzeigeart offen');
+}
+
+/* ---------- Darstellung ---------- */
+function tbmRender(fromOpen){
+  const d = tbmData(); if(!d) return;
+  const t = activeTeam();
+  if(fromOpen){
+    tbmFrage.einheit = !!(d.einheit && d.einheit.items.some(i=>!i.erledigt));
+    tbmFrage.abenteuer = !!(d.abenteuer && d.abenteuer.stationen.some(s=>!s.ok));
+  }
+  const m = d.modus;
+  document.querySelectorAll('[data-tbm]').forEach(b=>b.setAttribute('aria-selected', b.dataset.tbm===m ? 'true' : 'false'));
+  TBM_MODI.forEach(k=>{ const el = document.getElementById('tbm'+k.charAt(0).toUpperCase()+k.slice(1)); if(el) el.hidden = (k!==m); });
+  const er = document.getElementById('tbmErklaerung'); if(er) er.textContent = TBM_ERKL[m];
+  const tn = document.getElementById('tbmTeam'); if(tn) tn.textContent = t ? (teamDisplayName(t) || ('Team '+(state.teams.indexOf(t)+1))) : '–';
+  if(m==='einheit') tbmRenderEinheit(); else if(m==='abenteuer') tbmRenderAbenteuer(); else if(m==='problem') tbmRenderProblem();
+  tbmBadges();
+}
+function tbmBadges(){
+  const t = activeTeam(), d = t && t.trainingHeute;
+  const o = { rad: tbmRadOffen(t) ? 1 : 0,
+    einheit: d && d.einheit ? d.einheit.items.filter(i=>!i.erledigt).length : 0,
+    abenteuer: d && d.abenteuer ? d.abenteuer.stationen.filter(s=>!s.ok).length : 0 };
+  document.querySelectorAll('[data-tbm]').forEach(b=>{
+    let x = b.querySelector('.tbm-badge'); const n = o[b.dataset.tbm];
+    if(n){ if(!x){ x = document.createElement('em'); x.className = 'tbm-badge'; b.appendChild(x); } x.textContent = n + ' offen'; }
+    else if(x) x.remove();
+  });
+  const h = document.getElementById('tbmOffenHinweis');
+  if(h){
+    const o2 = (d && d.modus==='rad' && tbmRadOffen(t)) ? t.uebungsrad.offen : null;
+    h.innerHTML = o2 ? `<div class="banner warn" style="margin-top:10px;"><span class="ico">⏳</span><div><b>Offene Glücksrad-Übung vom ${esc(tbmDatum(o2.am))}</b> – bitte beantworten, ob du sie durchgeführt hast.<div class="btn-row" style="margin-top:6px;"><button class="btn small primary" type="button" data-tbm-act="zur-radfrage">Zur Rückfrage</button></div></div></div>` : '';
+  }
+}
+function tbmFeld(l, t){ return t ? `<div class="field"><span class="field-label">${esc(l)}</span><p>${esc(t)}</p></div>` : ''; }
+
+function tbmRenderEinheit(){
+  const host = document.getElementById('tbmEinheit'); const d = tbmData(); if(!host || !d) return;
+  const e = d.einstellungen, pool = tbmPool(), k = tbmKategorien(pool), sw = e.schwerpunkt || tbmStdSchwerpunkt();
+  const opt = (v,l)=>`<option value="${esc(v)}"${v===sw?' selected':''}>${esc(l)}</option>`;
+  const og = (lbl,arr)=>arr.length ? `<optgroup label="${esc(lbl)}">${arr.map(c=>opt(c, bibCatName(c)+' ('+k.counts[c]+')')).join('')}</optgroup>` : '';
+  let h = `<div class="card"><div class="card-head"><h3>Trainingseinheit zusammenstellen</h3></div>
+<p class="muted" style="font-size:.88rem;">Schwerpunkt, Anzahl und Stufe wählen. Sparte und Anzeigeart aus dem Profil werden berücksichtigt; in den letzten 14 Tagen abgehakte Übungen kommen seltener.</p>
+<div class="formrow inline">
+<div><label for="tbmSchwerpunkt">Schwerpunkt</label><select id="tbmSchwerpunkt" data-tbm-einst="schwerpunkt"><optgroup label="Gemischte Einheit">${opt('mix_alltag','Gemischt · Alltag & Grundlagen')}${opt('mix_rh','Gemischt · Rettungshundearbeit')}${opt('mix_alle','Gemischt · alles')}</optgroup>${og('Alltag & Grundlagen',k.alltag)}${og('Rettungshundearbeit',k.rh)}${og('Besondere Bereiche',k.spezial)}</select></div>
+<div><label for="tbmAnzahl">Anzahl</label><select id="tbmAnzahl" data-tbm-einst="anzahl">${[3,4,6,8].map(n=>`<option value="${n}"${Number(e.anzahl||6)===n?' selected':''}>${n} Übungen</option>`).join('')}</select></div>
+<div><label for="tbmStufe">Stufe</label><select id="tbmStufe" data-tbm-einst="stufe">${[1,2,3].map(n=>`<option value="${n}"${Number(e.stufe||1)===n?' selected':''}>Stufe ${n} · ${TBM_LEVEL[n]}</option>`).join('')}</select></div>
+</div>
+<div class="btn-row" style="margin-top:12px;"><button class="btn primary" type="button" data-tbm-act="zusammenstellen">Trainingseinheit zusammenstellen</button></div>
+<div id="tbmNeuFrage"></div>
+<p class="muted" style="font-size:.78rem;margin-top:8px;">${pool.length} passende Übungen im Bestand${esc(tbmProfilHinweis())}</p></div>`;
+  const ein = d.einheit;
+  if(ein && ein.items.length){
+    const off = ein.items.filter(i=>!i.erledigt).length;
+    if(tbmFrage.einheit && off){
+      h += `<div class="banner warn tbm-frage"><span class="ico">⏳</span><div><b>Offene Trainingseinheit vom ${esc(tbmDatum(ein.erstellt))}</b><br>${off} von ${ein.items.length} Übungen sind noch nicht abgehakt. Hast du sie inzwischen durchgeführt?
+<div class="btn-row" style="margin-top:8px;"><button class="btn small primary" type="button" data-tbm-act="alle-abhaken">Ja, alle durchgeführt – abhaken</button><button class="btn small" type="button" data-tbm-act="frage-weg">Teilweise – einzeln abhaken</button><button class="btn small" type="button" data-tbm-act="verwerfen">Nicht durchgeführt – verwerfen</button></div></div></div>`;
+    }
+    h += `<div class="card tbm-einheit-kopf"><div class="card-head"><h3>Deine Trainingseinheit</h3><span class="pill ${off?'gold':'green'}">${ein.items.length-off} / ${ein.items.length} abgehakt</span></div>
+<p class="muted" style="font-size:.85rem;">Erstellt am ${esc(tbmDatum(ein.erstellt))} · ${esc(tbmSchwerpunktName(ein.schwerpunkt))}</p>
+<p style="font-size:.88rem;">Vor dem Training kurz prüfen: Hund gesund und ausgeruht, Wetter und Untergrund passen, Wasser dabei. Nach jeder Übung abhaken – erst dann gilt sie als erledigt.</p></div>`;
+    h += ein.items.map((it,i)=>tbmKarte(it,i)).join('');
+    h += `<div class="card"><div class="btn-row"><button class="btn primary" type="button" data-tbm-act="abschliessen">Einheit abschließen</button></div><div id="tbmAbschluss"></div></div>`;
+  }
+  host.innerHTML = h;
+}
+function tbmKarte(it, i){
+  const b = bibLoad(), u = b.byId.get(it.id);
+  if(!u) return `<div class="card"><p class="muted">Die Übung ${esc(it.id)} ist im aktuellen Bestand nicht mehr vorhanden.</p><button class="btn small" type="button" data-tbm-act="entfernen" data-i="${i}">Entfernen</button></div>`;
+  const lv = u.levels[Math.min(it.stufe, u.levels.length)-1] || {};
+  const farbe = (b.cats[u.cat] && b.cats[u.cat].color) || '';
+  const voll = renderUebungKarte(u).replace('<details class="card bib-card" style="margin:0">', '<details class="card bib-card" style="margin:0" open>');
+  return `<article class="card tbm-karte${it.erledigt?' tbm-erledigt':''}"${farbe?` style="--tbm-c:${esc(farbe)}"`:''}>
+<div class="card-head"><h3><span class="tbm-nr">${i+1}</span>${esc(u.name)}</h3><span class="pill neutral">${esc(bibCatName(u.cat))}</span></div>
+<div class="tbm-stufen" role="group" aria-label="Stufe dieser Übung">${[1,2,3].slice(0,u.levels.length).map(n=>`<button type="button" class="tbm-stufe" data-tbm-act="stufe" data-i="${i}" data-n="${n}" aria-pressed="${n===it.stufe}"${it.erledigt?' disabled':''}>Stufe ${n} · ${TBM_LEVEL[n]}</button>`).join('')}</div>
+${tbmFeld('Ziel', u.goal)}${tbmFeld('So geht’s', u.how)}
+<div class="tbm-jetzt"><span class="field-label">Trainiere jetzt${lv.param?' · '+esc(lv.param):''}</span><p>${esc(lv.desc||'')}</p></div>
+${tbmFeld('Übertragung / Hinweis', lv.insp)}
+${u.safety?`<div class="sicherheit"><span class="field-label">Sicherheit</span><p>${esc(u.safety)}</p></div>`:''}
+<details class="tbm-voll"><summary>📖 Vollständige Übungskarte (Material, Schritt für Schritt, wenn es nicht klappt)</summary>${voll}</details>
+<div class="formrow" style="margin-top:10px;"><label for="tbmK${i}">Kurzer Trainingskommentar</label><input type="text" id="tbmK${i}" data-tbm-kommentar="${i}" value="${esc(it.kommentar||'')}" placeholder="Wie lief es? Was ist der nächste Schritt?"></div>
+<div class="btn-row" style="margin-top:8px;">${it.erledigt
+  ? `<button class="btn small tbm-ok" type="button" data-tbm-act="abhaken" data-i="${i}" title="Abhaken zurücknehmen">✓ Abgehakt am ${esc(tbmDatum(it.erledigt))}</button>`
+  : `<button class="btn small primary" type="button" data-tbm-act="abhaken" data-i="${i}">✓ Durchgeführt – abhaken</button><button class="btn small" type="button" data-tbm-act="tauschen" data-i="${i}">Andere Übung</button>`}
+<button class="btn small" type="button" data-tbm-act="entfernen" data-i="${i}">Entfernen</button></div></article>`;
+}
+function tbmAbschlussFrage(){
+  const d = tbmData(), ein = d && d.einheit, box = document.getElementById('tbmAbschluss'); if(!ein || !box) return;
+  const ok = ein.items.filter(i=>i.erledigt).length, off = ein.items.length - ok;
+  box.innerHTML = `<div class="banner accent" style="margin-top:10px;"><span class="ico">✔</span><div><b>${ok} von ${ein.items.length} Übungen abgehakt.</b>${off?` ${off} nicht abgehakte Übung${off>1?'en werden':' wird'} als „nicht durchgeführt“ vermerkt.`:''}<br>${ok?'Soll die Einheit ins Trainingstagebuch übernommen werden?':'Es wurde keine Übung abgehakt.'}
+<div class="btn-row" style="margin-top:8px;">${ok?'<button class="btn small primary" type="button" data-tbm-act="abschluss-tb">Abschließen und ins Tagebuch</button>':''}<button class="btn small" type="button" data-tbm-act="abschluss-ohne">Abschließen${ok?' ohne Tagebuch':''}</button><button class="btn small" type="button" data-tbm-act="abschluss-abbruch">Abbrechen</button></div></div></div>`;
+  if(box.scrollIntoView) box.scrollIntoView({behavior:'smooth', block:'center'});
+}
+function tbmAbschliessen(insTagebuch, still){
+  const t = activeTeam(), d = tbmData(), ein = d && d.einheit; if(!ein) return;
+  const by = bibLoad().byId, name = i=>{ const u = by.get(i.id); return u ? (u.excelId||u.id)+' „'+u.name+'“' : i.id; };
+  const ok = ein.items.filter(i=>i.erledigt), off = ein.items.filter(i=>!i.erledigt);
+  ok.forEach(i=>{ d.geuebt[i.id] = i.erledigt; });
+  if(insTagebuch && ok.length){
+    t.tagebuch = t.tagebuch || [];
+    t.tagebuch.push({ id:uid(), datum:uemHeute(), bereich:'trainingseinheit', ausfuehrung:null, findewille:null,
+      notiz:'Trainingseinheit ('+tbmSchwerpunktName(ein.schwerpunkt)+')\n'+ok.map(i=>'✓ '+name(i)+' · Stufe '+i.stufe+(i.kommentar?' – '+i.kommentar:'')).join('\n')+(off.length?'\nNicht durchgeführt: '+off.map(name).join(', '):''),
+      naechsterSchritt:'', quelle:'Training · Trainingseinheit' });
+  }
+  d.verlauf.unshift({ erstellt:ein.erstellt, abgeschlossen:new Date().toISOString(), schwerpunkt:ein.schwerpunkt, items:ein.items.map(i=>({id:i.id, stufe:i.stufe, erledigt:i.erledigt, kommentar:i.kommentar})) });
+  d.verlauf = d.verlauf.slice(0,20);
+  d.einheit = null; tbmFrage.einheit = false; saveState();
+  if(!still){ tbmRender(false); showInfoToast(insTagebuch && ok.length ? 'Einheit abgeschlossen und ins Trainingstagebuch eingetragen.' : 'Einheit abgeschlossen.'); }
+}
+function tbmHinzufuegen(id){
+  const d = tbmData(), u = bibLoad().byId.get(id); if(!d || !u) return false;
+  if(!d.einheit) d.einheit = {id:uid(), erstellt:new Date().toISOString(), schwerpunkt:'problem', items:[]};
+  if(d.einheit.items.some(i=>i.id===id)) return false;
+  d.einheit.items.push(tbmItem(u, d.einstellungen.stufe)); saveState(); return true;
+}
+
+function tbmRenderAbenteuer(){
+  const host = document.getElementById('tbmAbenteuer'); const d = tbmData(); if(!host || !d) return;
+  const art = d.einstellungen.abenteuerArt || 'sanft', a = d.abenteuer;
+  let h = `<div class="card"><div class="card-head"><h3>Abenteuer-Spaziergang</h3></div>
+<p style="font-size:.9rem;"><b>Kein Parcours, den man „schaffen“ muss.</b> Der Abenteuer-Spaziergang macht einen normalen Spaziergang zu gemeinsamer Entdeckungszeit. Ziel sind Spaß, freiwilliges Problemlösen, Körpergefühl, Selbstsicherheit und Kooperation. Jede Station darf ausgelassen oder leichter gemacht werden.</p>
+<div class="tbm-chips" role="group" aria-label="Art des Spaziergangs">${TBM_ABENTEUER_ARTEN.map(([k,l])=>`<button type="button" class="tbm-chip" data-tbm-act="abenteuer-art" data-n="${k}" aria-pressed="${k===art}">${esc(l)}</button>`).join('')}</div>
+<div class="btn-row" style="margin-top:10px;"><button class="btn primary" type="button" data-tbm-act="abenteuer-ziehen">🎒 6 Abenteuer-Stationen ziehen</button></div>
+<div id="tbmAbNeuFrage"></div>
+<details class="ux-disclosure"><summary>Die 5 Abenteuer-Regeln</summary><ol style="margin:0 0 8px 18px;padding:0;font-size:.9rem;"><li>freiwillig statt zwingen</li><li>eine Schwierigkeit verändern</li><li>kleine Erfolge feiern</li><li>Pausen &amp; Schnüffeln erlauben</li><li>auf sicherem Untergrund bleiben</li></ol>
+<p class="muted" style="font-size:.85rem;margin-bottom:12px;">Besonders für unsichere Hunde: Abstand zum Reiz ist ebenfalls eine erfolgreiche Lösung. Neugier darf wachsen; der Mensch sichert und unterstützt, statt den Hund in eine Situation hineinzuziehen.</p></details></div>`;
+  if(a && a.stationen && a.stationen.length){
+    const n = a.stationen.filter(s=>s.ok).length, off = a.stationen.length - n;
+    if(tbmFrage.abenteuer && off){
+      h += `<div class="banner warn tbm-frage"><span class="ico">⏳</span><div><b>Offener Abenteuer-Spaziergang vom ${esc(tbmDatum(a.erstellt))}</b><br>${off} von ${a.stationen.length} Stationen sind noch nicht abgehakt. Habt ihr den Spaziergang gemacht?
+<div class="btn-row" style="margin-top:8px;"><button class="btn small primary" type="button" data-tbm-act="ab-alle">Ja, alle Stationen gemacht – abhaken</button><button class="btn small" type="button" data-tbm-act="ab-frage-weg">Teilweise – einzeln abhaken</button><button class="btn small" type="button" data-tbm-act="ab-verwerfen">Nicht gemacht – verwerfen</button></div></div></div>`;
+    }
+    const artName = (TBM_ABENTEUER_ARTEN.find(x=>x[0]===a.art)||[,''])[1];
+    h += `<div class="card tbm-ab-kopf"><div class="card-head"><h3>Eure Stationen</h3><span class="pill ${off?'gold':'green'}">${n} / ${a.stationen.length} gemacht</span></div>
+<p class="muted" style="font-size:.85rem;">Gezogen am ${esc(tbmDatum(a.erstellt))}${artName?' · '+esc(artName):''}</p>
+<div class="tbm-stationen">${a.stationen.map((s,i)=>`<article class="tbm-station${s.ok?' tbm-erledigt':''}"><div class="tbm-station-kopf"><span class="pill blue">Station ${i+1}</span><b>${esc(s.t)}</b></div><p style="font-size:.9rem;">${esc(s.d)}</p><p class="muted" style="font-size:.78rem;"><b>Teamregel:</b> freiwillig, sicher, kurz – lieber mit Erfolg aufhören.</p><div><button class="btn small ${s.ok?'tbm-ok':'primary'}" type="button" data-tbm-act="station" data-i="${i}">${s.ok?'✓ Gemacht am '+esc(tbmDatum(s.ok)):'✓ Gemacht – abhaken'}</button></div></article>`).join('')}</div>
+<div class="btn-row" style="margin-top:12px;"><button class="btn primary" type="button" data-tbm-act="ab-abschliessen">Spaziergang abschließen</button></div><div id="tbmAbAbschluss"></div></div>`;
+  }
+  host.innerHTML = h;
+}
+function tbmAbenteuerZiehen(){
+  const d = tbmData(), art = d.einstellungen.abenteuerArt || 'sanft';
+  const pool = tbmMische(TBM_ABENTEUER.filter(x=>x.tags.includes(art) || art==='bunt')).slice(0,6);
+  d.abenteuer = {erstellt:new Date().toISOString(), art, stationen:pool.map(x=>({t:x.t, d:x.d, ok:null}))};
+  tbmFrage.abenteuer = false; saveState(); tbmRender(false);
+  const k = document.querySelector('#tbmAbenteuer .tbm-ab-kopf'); if(k && k.scrollIntoView) k.scrollIntoView({behavior:'smooth', block:'start'});
+}
+function tbmAbAbschlussFrage(){
+  const d = tbmData(), a = d && d.abenteuer, box = document.getElementById('tbmAbAbschluss'); if(!a || !box) return;
+  const ok = a.stationen.filter(s=>s.ok).length;
+  box.innerHTML = `<div class="banner accent" style="margin-top:10px;"><span class="ico">✔</span><div><b>${ok} von ${a.stationen.length} Stationen gemacht.</b><br>${ok?'Soll der Spaziergang ins Trainingstagebuch übernommen werden?':'Es wurde keine Station abgehakt.'}
+<div class="btn-row" style="margin-top:8px;">${ok?'<button class="btn small primary" type="button" data-tbm-act="ab-abschluss-tb">Abschließen und ins Tagebuch</button>':''}<button class="btn small" type="button" data-tbm-act="ab-abschluss-ohne">Abschließen${ok?' ohne Tagebuch':''}</button><button class="btn small" type="button" data-tbm-act="ab-abschluss-abbruch">Abbrechen</button></div></div></div>`;
+  if(box.scrollIntoView) box.scrollIntoView({behavior:'smooth', block:'center'});
+}
+function tbmAbAbschliessen(insTagebuch, still){
+  const t = activeTeam(), d = tbmData(), a = d && d.abenteuer; if(!a) return;
+  const ok = a.stationen.filter(s=>s.ok), off = a.stationen.filter(s=>!s.ok);
+  if(insTagebuch && ok.length){
+    t.tagebuch = t.tagebuch || [];
+    t.tagebuch.push({ id:uid(), datum:uemHeute(), bereich:'abenteuer', ausfuehrung:null, findewille:null,
+      notiz:'Abenteuer-Spaziergang\n'+ok.map(s=>'✓ '+s.t).join('\n')+(off.length?'\nAusgelassen: '+off.map(s=>s.t).join(', '):''),
+      naechsterSchritt:'', quelle:'Training · Abenteuer-Spaziergang' });
+  }
+  d.abenteuer = null; tbmFrage.abenteuer = false; saveState();
+  if(!still){ tbmRender(false); showInfoToast(insTagebuch && ok.length ? 'Spaziergang abgeschlossen und ins Trainingstagebuch eingetragen.' : 'Spaziergang abgeschlossen.'); }
+}
+
+function tbmProblemText(u){ return [u.name, u.goal, u.everyday, u.how].join(' '); }
+function tbmRenderProblem(){
+  const host = document.getElementById('tbmProblem'); const d = tbmData(); if(!host || !d) return;
+  const inEinheit = new Set(d.einheit ? d.einheit.items.map(i=>i.id) : []);
+  let liste = [];
+  if(tbmProblemAktiv!==null){
+    const pr = TBM_PROBLEME[tbmProblemAktiv];
+    liste = tbmPool().filter(u=>{ const t = tbmProblemText(u); return pr.r.test(t) && !(pr.n && pr.n.test(t) && !/Methode \d/.test(u.name)); })
+      .sort((a,b)=>(/Methode \d/.test(b.name)?1:0)-(/Methode \d/.test(a.name)?1:0)).slice(0,8);
+  }
+  let h = `<div class="card"><div class="card-head"><h3>Problem angehen</h3></div><p style="font-size:.9rem;">Wobei möchtest du deinem Hund helfen? Tippe auf ein Thema – die App zeigt passende Übungen.</p>
+<div class="tbm-problemgrid">${TBM_PROBLEME.map((p,i)=>`<button type="button" class="tbm-chip" data-tbm-act="problem" data-i="${i}" aria-pressed="${i===tbmProblemAktiv}">${esc(p.t)}</button>`).join('')}</div></div>`;
+  if(tbmProblemAktiv!==null){
+    if(!liste.length) h += `<div class="banner"><span class="ico">ℹ</span><div>Zu diesem Thema sind für die Sparte und Anzeigeart deines Teams noch keine passenden Übungen hinterlegt.</div></div>`;
+    else {
+      if(liste.some(u=>/Methode \d/.test(u.name))) h += `<div class="banner accent"><span class="ico">ℹ</span><div><b>Es gibt mehrere Wege.</b> Nicht jede Methode passt zu jedem Hund und jedem Menschen. Lies bei jeder Methode, wann sie gut passt – und kombiniere gern mehrere.</div></div>`;
+      h += liste.map(u=>{ const passt = /Methode \d/.test(u.name) && /Passt gut, wenn: ([^·]+)/.exec(u.how||'');
+        return `<div class="card tbm-problem"><div class="card-head"><h3 style="font-size:1rem;">${esc(u.name)}</h3><span class="pill neutral">${esc(bibCatName(u.cat))}</span></div>
+<p class="muted" style="font-size:.88rem;">${esc(u.goal||'')}</p>${passt?`<p style="font-size:.85rem;"><b>Passt gut, wenn</b> ${esc(passt[1].trim())}</p>`:''}
+<div class="btn-row" style="margin-top:6px;"><button class="btn small" type="button" data-tbm-act="problem-ansehen" data-id="${esc(u.id)}">Übung ansehen</button>${inEinheit.has(u.id)
+  ? `<button class="btn small tbm-ok" type="button" data-tbm-act="zur-einheit">✓ In der Trainingseinheit</button>`
+  : `<button class="btn small primary" type="button" data-tbm-act="problem-add" data-id="${esc(u.id)}">Zur Trainingseinheit hinzufügen</button>`}</div>
+<div class="tbm-problem-karte" data-karte="${esc(u.id)}" hidden></div></div>`; }).join('');
+      h += `<p class="muted" style="font-size:.8rem;">Bei starken oder plötzlich auftretenden Verhaltensproblemen bitte zusätzlich tierärztlich abklären lassen bzw. eine qualifizierte Hundetrainerin / einen Hundetrainer hinzuziehen.</p>`;
+    }
+  }
+  host.innerHTML = h;
+}
+
+/* ---------- Startseite: offene Übungen nachfragen ---------- */
+function tbStartOffen(){
+  const el = document.getElementById('startOffeneUebungen'); if(!el) return;
+  const t = activeTeam(), d = t && t.trainingHeute, z = [];
+  if(tbmRadOffen(t)){ const o = t.uebungsrad.offen, ti = tbmUemTitel(o.id); z.push({m:'rad', txt:'Glücksrad: '+o.id+(ti?' „'+ti+'“':'')+' vom '+tbmDatum(o.am), btn:'Glücksrad-Übung nachtragen'}); }
+  if(d && d.einheit){ const n = d.einheit.items.filter(i=>!i.erledigt).length; if(n) z.push({m:'einheit', txt:'Trainingseinheit vom '+tbmDatum(d.einheit.erstellt)+': '+n+' von '+d.einheit.items.length+' Übungen nicht abgehakt', btn:'Trainingseinheit nachtragen'}); }
+  if(d && d.abenteuer){ const n = d.abenteuer.stationen.filter(s=>!s.ok).length; if(n) z.push({m:'abenteuer', txt:'Abenteuer-Spaziergang vom '+tbmDatum(d.abenteuer.erstellt)+': '+n+' von '+d.abenteuer.stationen.length+' Stationen nicht abgehakt', btn:'Abenteuer nachtragen'}); }
+  el.innerHTML = z.length ? `<div class="banner warn" style="margin-bottom:14px;"><span class="ico">⏳</span><div><b>Offen aus deinem letzten Training</b><ul style="margin:6px 0 6px 18px;padding:0;">${z.map(x=>`<li>${esc(x.txt)}</li>`).join('')}</ul>Hast du diese Übungen durchgeführt? Dann hake sie bitte ab – oder verwirf sie, wenn sie nicht stattgefunden haben.
+<div class="btn-row" style="margin-top:8px;">${z.map(x=>`<button class="btn small primary" type="button" data-tbm-oeffnen="${x.m}">${esc(x.btn)}</button>`).join('')}</div></div></div>` : '';
+}
+
+/* ---------- Bedienung ---------- */
+(function(){
+  const app = document.getElementById('app'); if(!app) return;
+  app.addEventListener('click', e=>{
+    const op = e.target.closest('[data-tbm-oeffnen]');
+    if(op){ const d = tbmData(); if(d){ d.modus = op.dataset.tbmOeffnen; saveState(); } showView('uebungsrad'); return; }
+    const mb = e.target.closest('[data-tbm]');
+    if(mb){ const d = tbmData(); if(!d) return; d.modus = mb.dataset.tbm; saveState(); tbmRender(false); if(d.modus==='rad'){ if(uemHost && uemHost.team===activeTeam()) uemHost.api.refresh(); else renderUebungsrad(); } return; }
+    const b = e.target.closest('[data-tbm-act]');
+    if(!b){ if(e.composedPath().some(n=>n && n.id==='tbmRad')) setTimeout(tbmBadges, 0); return; }
+    const d = tbmData(); if(!d) return;
+    const act = b.dataset.tbmAct, i = Number(b.dataset.i), ein = d.einheit, it = ein && ein.items[i];
+    switch(act){
+      case 'zusammenstellen': {
+        if(ein && ein.items.length){
+          const off = ein.items.filter(x=>!x.erledigt).length;
+          document.getElementById('tbmNeuFrage').innerHTML = `<div class="banner warn" style="margin-top:10px;"><span class="ico">⚠</span><div>Die bisherige Einheit vom ${esc(tbmDatum(ein.erstellt))} ist noch nicht abgeschlossen${off?` (${off} Übung${off>1?'en':''} nicht abgehakt)`:''}. Bereits abgehakte Übungen bleiben im Verlauf erhalten.
+<div class="btn-row" style="margin-top:8px;"><button class="btn small primary" type="button" data-tbm-act="neu-trotzdem">Bisherige abschließen und neu zusammenstellen</button><button class="btn small" type="button" data-tbm-act="neu-abbruch">Abbrechen</button></div></div></div>`;
+          return;
+        }
+        tbmStelleZusammen(); return;
+      }
+      case 'neu-trotzdem': tbmAbschliessen(false, true); tbmStelleZusammen(); return;
+      case 'neu-abbruch': document.getElementById('tbmNeuFrage').innerHTML = ''; return;
+      case 'abhaken': {
+        if(!it) return; it.erledigt = it.erledigt ? null : new Date().toISOString(); tbmFrage.einheit = false; saveState(); tbmRender(false);
+        if(it.erledigt && ein.items.every(x=>x.erledigt)) tbmAbschlussFrage();
+        return;
+      }
+      case 'stufe': if(it && !it.erledigt){ it.stufe = Number(b.dataset.n)||1; saveState(); tbmRender(false); } return;
+      case 'tauschen': {
+        if(!it) return; const alt = bibLoad().byId.get(it.id);
+        const u = tbmZiehe(tbmPool().filter(x=>x.cat===(alt?alt.cat:'')), d, ein.items.map(x=>x.id));
+        if(!u){ showInfoToast('In diesem Bereich gibt es keine weitere passende Übung.'); return; }
+        ein.items[i] = tbmItem(u, it.stufe); saveState(); tbmRender(false); return;
+      }
+      case 'entfernen': if(ein){ ein.items.splice(i,1); if(!ein.items.length) d.einheit = null; saveState(); tbmRender(false); } return;
+      case 'alle-abhaken': if(ein){ const jetzt = new Date().toISOString(); ein.items.forEach(x=>{ if(!x.erledigt) x.erledigt = jetzt; }); tbmFrage.einheit = false; saveState(); tbmRender(false); tbmAbschlussFrage(); } return;
+      case 'frage-weg': tbmFrage.einheit = false; tbmRender(false); return;
+      case 'verwerfen': tbmAbschliessen(false); return;
+      case 'abschliessen': tbmAbschlussFrage(); return;
+      case 'abschluss-tb': tbmAbschliessen(true); return;
+      case 'abschluss-ohne': tbmAbschliessen(false); return;
+      case 'abschluss-abbruch': { const x = document.getElementById('tbmAbschluss'); if(x) x.innerHTML = ''; return; }
+      case 'abenteuer-art': d.einstellungen.abenteuerArt = b.dataset.n; saveState(); document.querySelectorAll('#tbmAbenteuer [data-tbm-act="abenteuer-art"]').forEach(c=>c.setAttribute('aria-pressed', c===b ? 'true':'false')); return;
+      case 'abenteuer-ziehen': {
+        const a = d.abenteuer;
+        if(a && a.stationen.length){
+          const off = a.stationen.filter(s=>!s.ok).length;
+          document.getElementById('tbmAbNeuFrage').innerHTML = `<div class="banner warn" style="margin-top:10px;"><span class="ico">⚠</span><div>Der bisherige Spaziergang vom ${esc(tbmDatum(a.erstellt))} ist noch nicht abgeschlossen${off?` (${off} Station${off>1?'en':''} nicht abgehakt)`:''}.
+<div class="btn-row" style="margin-top:8px;"><button class="btn small primary" type="button" data-tbm-act="ab-neu-trotzdem">Bisherigen abschließen und neu ziehen</button><button class="btn small" type="button" data-tbm-act="ab-neu-abbruch">Abbrechen</button></div></div></div>`;
+          return;
+        }
+        tbmAbenteuerZiehen(); return;
+      }
+      case 'ab-neu-trotzdem': tbmAbAbschliessen(false, true); tbmAbenteuerZiehen(); return;
+      case 'ab-neu-abbruch': document.getElementById('tbmAbNeuFrage').innerHTML = ''; return;
+      case 'station': { const a = d.abenteuer, s = a && a.stationen[i]; if(!s) return; s.ok = s.ok ? null : new Date().toISOString(); tbmFrage.abenteuer = false; saveState(); tbmRender(false); if(s.ok && a.stationen.every(x=>x.ok)) tbmAbAbschlussFrage(); return; }
+      case 'ab-alle': { const a = d.abenteuer; if(!a) return; const jetzt = new Date().toISOString(); a.stationen.forEach(s=>{ if(!s.ok) s.ok = jetzt; }); tbmFrage.abenteuer = false; saveState(); tbmRender(false); tbmAbAbschlussFrage(); return; }
+      case 'ab-frage-weg': tbmFrage.abenteuer = false; tbmRender(false); return;
+      case 'ab-verwerfen': tbmAbAbschliessen(false); return;
+      case 'ab-abschliessen': tbmAbAbschlussFrage(); return;
+      case 'ab-abschluss-tb': tbmAbAbschliessen(true); return;
+      case 'ab-abschluss-ohne': tbmAbAbschliessen(false); return;
+      case 'ab-abschluss-abbruch': { const x = document.getElementById('tbmAbAbschluss'); if(x) x.innerHTML = ''; return; }
+      case 'problem': tbmProblemAktiv = (tbmProblemAktiv===i) ? null : i; tbmRender(false); return;
+      case 'problem-ansehen': {
+        const box = b.closest('.tbm-problem').querySelector('[data-karte]'), u = bibLoad().byId.get(b.dataset.id); if(!box || !u) return;
+        if(box.hidden){ box.innerHTML = renderUebungKarte(u).replace('<details class="card bib-card" style="margin:0">', '<details class="card bib-card" style="margin:8px 0 0" open>'); box.hidden = false; b.textContent = 'Übung ausblenden'; }
+        else { box.hidden = true; box.innerHTML = ''; b.textContent = 'Übung ansehen'; }
+        return;
+      }
+      case 'problem-add': if(tbmHinzufuegen(b.dataset.id)){ showInfoToast('Zur Trainingseinheit hinzugefügt – dort nach dem Üben abhaken.'); tbmRender(false); } return;
+      case 'zur-radfrage': { const f = document.querySelector('#tbmRad .uem-offen') || document.querySelector('#tbmRad [data-res]'); if(f && f.scrollIntoView) f.scrollIntoView({behavior:'smooth', block:'center'}); return; }
+      case 'zur-einheit': d.modus = 'einheit'; saveState(); tbmRender(false); window.scrollTo({top:0, behavior:'smooth'}); return;
+    }
+  });
+  app.addEventListener('change', e=>{
+    const s = e.target.closest('[data-tbm-einst]'); if(!s) return;
+    const d = tbmData(); if(!d) return;
+    const k = s.dataset.tbmEinst; d.einstellungen[k] = (k==='schwerpunkt') ? s.value : Number(s.value); saveState();
+  });
+  app.addEventListener('input', e=>{
+    const f = e.target.closest('[data-tbm-kommentar]'); if(!f) return;
+    const d = tbmData(), it = d && d.einheit && d.einheit.items[Number(f.dataset.tbmKommentar)]; if(!it) return;
+    it.kommentar = f.value; clearTimeout(tbmKommentarTimer); tbmKommentarTimer = setTimeout(saveState, 500);
+  });
+})();
 </script>
 <script id="ux-compact-helper">
 (function(){
