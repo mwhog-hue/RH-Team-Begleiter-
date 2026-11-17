@@ -1,22 +1,52 @@
-/* Team-Begleiter Rettungshund – Service Worker v2.32.0
-   Seite: zuerst Netz (damit neue Versionen sofort ankommen), offline aus dem Cache.
-   Übrige Dateien: zuerst Cache, sonst Netz. */
-const CACHE = 'rh-teambegleiter-v2-32-0';
-const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './apple-touch-icon.png'];
+/* Team-Begleiter Rettungshund – Service Worker (versionsunabhängig)
+   Diese Datei muss bei neuen App-Versionen NICHT mehr geändert werden.
+   • Seite (index.html): immer zuerst aus dem Netz, am Browser-Zwischenspeicher vorbei
+     („no-cache“ = beim Server nachfragen, ob es eine neuere Fassung gibt).
+     Ohne Netz: die zuletzt geladene Fassung aus dem Offline-Speicher.
+   • Übrige eigene Dateien (Icons, Manifest): sofort aus dem Offline-Speicher,
+     im Hintergrund wird die aktuelle Fassung nachgeladen (für den nächsten Start).
+   • Beim ersten Start mit dieser Datei werden alte, versionsnummerierte Speicher gelöscht. */
+const CACHE = 'rh-teambegleiter';
+const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./apple-touch-icon.png"];
+
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => Promise.all(CORE.map(u => c.add(u).catch(() => null)))));
+  e.waitUntil(caches.open(CACHE).then(c => Promise.all(CORE.map(u =>
+    c.add(new Request(u, { cache: 'no-cache' })).catch(() => null)))));
   self.skipWaiting();
 });
+
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys()
+    .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+    .then(() => self.clients.claim()));
 });
+
+function speichern(req, r) {
+  if (r && r.ok && r.type === 'basic') { const kopie = r.clone(); caches.open(CACHE).then(c => c.put(req, kopie)); }
+  return r;
+}
+
 self.addEventListener('fetch', e => {
   const req = e.request;
-  if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
-  if (req.mode === 'navigate' || req.url.endsWith('/index.html')) {
-    e.respondWith(fetch(req).then(r => { const copy = r.clone(); caches.open(CACHE).then(c => c.put(req, copy)); return r; })
-      .catch(() => caches.match(req).then(m => m || caches.match('./index.html'))));
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  if (url.origin !== location.origin) return;
+
+  const istSeite = req.mode === 'navigate' || url.pathname.endsWith('/') || url.pathname.endsWith('/index.html');
+  if (istSeite) {
+    e.respondWith(
+      fetch(req, { cache: 'no-cache' })
+        .then(r => speichern(req, r))
+        .catch(() => caches.match(req, { ignoreSearch: true })
+          .then(m => m || caches.match('./index.html'))
+          .then(m => m || caches.match('./')))
+    );
     return;
   }
-  e.respondWith(caches.match(req).then(m => m || fetch(req).then(r => { if (r.ok) { const copy = r.clone(); caches.open(CACHE).then(c => c.put(req, copy)); } return r; })));
+
+  e.respondWith(caches.match(req).then(m => {
+    const netz = fetch(req, { cache: 'no-cache' }).then(r => speichern(req, r)).catch(() => m);
+    if (m) { e.waitUntil(netz); return m; }
+    return netz;
+  }));
 });
