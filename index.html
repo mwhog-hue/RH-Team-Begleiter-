@@ -7314,12 +7314,15 @@ function hatSan(){ return hat('slg'); }
 
 /* Fristlogik wie BARRY: jährliche Nachweise nach Kalenderjahr (fällig ab 1.1. des Folgejahres, gültig bis 31.8.,
    Nachfrist bis 30.11., ab 1.12. kritisch); sonst Datum + Intervall. */
+const EINMAL_PFLICHT=new Set(['rke','ds','ekga_e','ekga_s','ekga_b','ekga_t','slg','ekf_pruef','bos','rhd','rhd_ehhund','modul_10','modul_11','modul_12','modul_13','tf']);
 function jahresfrist(d){ const j=Number(String(d||'').slice(0,4)); if(!j) return null; const f=j+1; return {faelligAb:f+'-01-01',gueltigBis:f+'-08-31',nachfristBis:f+'-11-30'}; }
 function status(code, opt){
  opt=opt||{}; const q=KQ(code); const h=heute();
  if(code==='eh'&&hatSan()) return {s:'ok',text:'durch Sanitätslehrgang ersetzt'};
  if(code==='rke_online'&&hat('rke')) return {s:'ok',text:'durch vollständiges RKE erfüllt'};
  if(code==='ekga_t'&&!hat('ekga_t')&&hat('tus')) return {s:'ok',text:'durch TuS (Vorgänger der EKGA-T) vom '+fmt(nachweise('tus')[0].datum)};
+ /* wie BARRY: einmalige Pflichtnachweise gelten als belegt, sobald eine Suchprüfung abgelegt wurde (Zulassungsvoraussetzung) */
+ if(EINMAL_PFLICHT.has(code)&&!hat(code)&&Q().nachweise.some(n=>n.code==='rh_pruef')) return {s:'ok',text:'durch abgelegte Suchprüfung belegt (Zulassungsvoraussetzung)'};
  if(code==='ekf_pruef'&&!hat('ekf_pruef')&&hat('slg')) return {s:'ok',text:'mit der Prüfung zum Sanitätslehrgang vom '+fmt(nachweise('slg')[0].datum)+' (Fach-Einsatzkraft Sanität)'};
  if(code==='tf'&&!hat('tf')&&hat('gfue')) return {s:'ok',text:'im Gruppenführer-Lehrgang vom '+fmt(nachweise('gfue')[0].datum)+' enthalten'};
  if(code==='modul_12'&&!hat('modul_12')&&hundDaten().bhvt) return {s:'ok',text:'FCI-BH/VT vom '+fmt(hundDaten().bhvt)};
