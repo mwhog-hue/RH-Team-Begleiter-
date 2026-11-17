@@ -4744,7 +4744,7 @@ function renderUebungKarte(u){
    ${(u.schritte&&u.schritte.length)?`<div class="field"><span class="field-label">Schritt für Schritt</span><ol>${u.schritte.map(s=>`<li>${esc(s)}</li>`).join('')}</ol></div>`:''}
    ${hilfenTxt}${wegeTxt}${p('Wenn es nicht klappt',u.fehler)}${p('Prüfungsbezug',u.exam)}${p('Alltag',u.everyday)}
    ${u.safety?`<div class="sicherheit"><span class="field-label">Sicherheit</span><p>${esc(u.safety)}</p></div>`:''}
-   ${(u.levels&&u.levels.length)?`<div class="field"><span class="field-label">Steigerungen</span><ul>${u.levels.map(l=>`<li><b>${esc(l.param)}:</b> ${esc(l.desc)}</li>`).join('')}</ul></div>`:''}
+   ${(u.levels&&u.levels.length)?`<div class="field"><span class="field-label">Steigerungen</span><ul>${(()=>{ const rec=(window.TBPaket3&&TBPaket3.autoStufe)?TBPaket3.autoStufe(u.cat,u.levels.length):0; return u.levels.map((l,i)=>`<li${i+1===rec?' style="font-weight:600"':''}><b>${esc(l.param)}:</b> ${esc(l.desc)}${i+1===rec?' <span class="pill green">passt zum Ausbildungsstand</span>':''}</li>`).join(''); })()}</ul></div>`:''}
    ${v&&v.steps?`<div class="field"><span class="field-label">Vertiefung – Schritt für Schritt</span><ol>${v.steps.map(s=>`<li><b>${esc(s.baustein)}:</b> ${esc(s.anweisung)} <em>(Weiter, wenn: ${esc(s.weiter)})</em></li>`).join('')}</ol></div>`:''}
    <p class="muted" style="font-size:.75rem;margin-top:8px;">Quelle/Stand: ${esc(u.source||'–')} · Gruppe: ${esc(u._gruppe||'')}</p>
    ${(typeof uemAltHinweis==='function'?uemAltHinweis(u.excelId,u.id):'')}
@@ -5598,6 +5598,8 @@ color:var(--uem-ink);font-size:16px;line-height:1.5;max-width:760px;margin:0 aut
       if ((u.fragen || []).length) h += '<div class="uem-sec"><h4>Fragen</h4>' + list(u.fragen, 'ol') + '</div>';
       if ((u.sicherheit || []).length) h += '<div class="uem-sec uem-safety"><h4>Sicherheit und Abbruch</h4>' + list(u.sicherheit, 'ul') + '</div>';
       if ((u.erfolgskriterien || []).length) h += '<div class="uem-sec"><h4>Geschafft, wenn …</h4>' + list(u.erfolgskriterien, 'ul') + '</div>';
+      var _as = (window.TBPaket3 && TBPaket3.ausbildungsstand) ? TBPaket3.ausbildungsstand() : null;
+      if (_as && (u.leichter || u.schwerer)) h += '<p class="uem-note"><strong>Für euren Ausbildungsstand – ' + esc(_as.label) + ':</strong> ' + (_as.rh >= 3 && u.schwerer ? 'gleich mit dem nächsten Schritt beginnen, die Grundform nur als Aufwärmen.' : (_as.rh <= 1 && u.leichter ? 'mit der leichteren Variante beginnen.' : 'mit der Grundform beginnen und bei Erfolg steigern.')) + '</p>';
       if (u.leichter || u.schwerer) h += '<div class="uem-sec"><h4>Anpassen</h4><ul>' + (u.leichter ? '<li><strong>Leichter:</strong> ' + fmt(u.leichter) + '</li>' : '') + (u.schwerer ? '<li><strong>Nächster Schritt:</strong> ' + fmt(u.schwerer) + '</li>' : '') + '</ul></div>';
       if ((u.rollenkarten || []).length) h += '<div class="uem-sec"><h4>Rollenkarten</h4><p class="uem-note">' + T('Jede Karte nur der Person zeigen, für die sie bestimmt ist.', 'Jede Karte nur der Person zeigen, für die sie bestimmt ist.') + '</p>' + u.rollenkarten.map(function (k) { return '<details class="uem-rk"><summary><strong>' + esc(k.titel) + '</strong> · ' + esc(k.fuer) + '</summary>' + (k.text || []).map(function (t) { return '<p>' + fmt(t) + '</p>'; }).join('') + '</details>'; }).join('') + '</div>';
       h += '<div class="uem-reveal" data-id="' + esc(u.id) + '"><div data-hints></div><div data-sol></div>';
@@ -5894,7 +5896,7 @@ function tbmZiehe(liste, d, used){
   for(const u of c){ r -= tbmGewicht(u,d); if(r <= 0) return u; }
   return c[c.length-1];
 }
-function tbmItem(u, stufe){ return {id:u.id, stufe:Math.min(Number(stufe)||1, u.levels.length), erledigt:null, kommentar:''}; }
+function tbmItem(u, stufe){ if(!stufe||stufe==='auto'||isNaN(Number(stufe))) stufe=(window.TBPaket3&&TBPaket3.autoStufe)?TBPaket3.autoStufe(u.cat,u.levels.length):1; return {id:u.id, stufe:Math.min(Number(stufe)||1, u.levels.length), erledigt:null, kommentar:''}; }
 function tbmStelleZusammen(){
   const d = tbmData(), e = d.einstellungen, pool = tbmPool(), n = Number(e.anzahl)||6, sw = e.schwerpunkt || tbmStdSchwerpunkt();
   const used = [], items = [];
@@ -5970,7 +5972,7 @@ function tbmRenderEinheit(){
 <div class="formrow inline">
 <div><label for="tbmSchwerpunkt">Schwerpunkt</label><select id="tbmSchwerpunkt" data-tbm-einst="schwerpunkt"><optgroup label="Gemischte Einheit">${opt('mix_alltag','Gemischt · Alltag & Grundlagen')}${opt('mix_rh','Gemischt · Rettungshundearbeit')}${opt('mix_alle','Gemischt · alles')}</optgroup>${og('Alltag & Grundlagen',k.alltag)}${og('Rettungshundearbeit',k.rh)}${og('Besondere Bereiche',k.spezial)}</select></div>
 <div><label for="tbmAnzahl">Anzahl</label><select id="tbmAnzahl" data-tbm-einst="anzahl">${[3,4,6,8].map(n=>`<option value="${n}"${Number(e.anzahl||6)===n?' selected':''}>${n} Übungen</option>`).join('')}</select></div>
-<div><label for="tbmStufe">Stufe</label><select id="tbmStufe" data-tbm-einst="stufe">${[1,2,3].map(n=>`<option value="${n}"${Number(e.stufe||1)===n?' selected':''}>Stufe ${n} · ${TBM_LEVEL[n]}</option>`).join('')}</select></div>
+<div><label for="tbmStufe">Stufe</label><select id="tbmStufe" data-tbm-einst="stufe"><option value="auto"${(!e.stufe||e.stufe==='auto'||isNaN(Number(e.stufe)))?' selected':''}>Automatisch · ${esc(window.TBPaket3?TBPaket3.ausbildungsstand().label:'nach Ausbildungsstand')}</option>${[1,2,3].map(n=>`<option value="${n}"${String(e.stufe)===String(n)?' selected':''}>Stufe ${n} · ${TBM_LEVEL[n]}</option>`).join('')}</select></div>
 </div>
 <div class="btn-row" style="margin-top:12px;"><button class="btn primary" type="button" data-tbm-act="zusammenstellen">Trainingseinheit zusammenstellen</button></div>
 <div id="tbmNeuFrage"></div>
@@ -6211,7 +6213,7 @@ function tbStartOffen(){
   app.addEventListener('change', e=>{
     const s = e.target.closest('[data-tbm-einst]'); if(!s) return;
     const d = tbmData(); if(!d) return;
-    const k = s.dataset.tbmEinst; d.einstellungen[k] = (k==='schwerpunkt') ? s.value : Number(s.value); saveState();
+    const k = s.dataset.tbmEinst; d.einstellungen[k] = (k==='schwerpunkt'||s.value==='auto') ? s.value : Number(s.value); saveState();
   });
   app.addEventListener('input', e=>{
     const f = e.target.closest('[data-tbm-kommentar]'); if(!f) return;
@@ -7322,7 +7324,7 @@ function status(code, opt){
  if(code==='rke_online'&&hat('rke')) return {s:'ok',text:'durch vollständiges RKE erfüllt'};
  if(code==='ekga_t'&&!hat('ekga_t')&&hat('tus')) return {s:'ok',text:'durch TuS (Vorgänger der EKGA-T) vom '+fmt(nachweise('tus')[0].datum)};
  /* wie BARRY: einmalige Pflichtnachweise gelten als belegt, sobald eine Suchprüfung abgelegt wurde (Zulassungsvoraussetzung) */
- if(EINMAL_PFLICHT.has(code)&&!hat(code)&&Q().nachweise.some(n=>n.code==='rh_pruef')) return {s:'ok',text:'durch abgelegte Suchprüfung belegt (Zulassungsvoraussetzung)'};
+ if(EINMAL_PFLICHT.has(code)&&!hat(code)&&(KQ(code).hund?nachweise('rh_pruef').length>0:Q().nachweise.some(n=>n.code==='rh_pruef'))) return {s:'ok',text:'durch abgelegte Suchprüfung belegt (Zulassungsvoraussetzung)'};
  if(code==='ekf_pruef'&&!hat('ekf_pruef')&&hat('slg')) return {s:'ok',text:'mit der Prüfung zum Sanitätslehrgang vom '+fmt(nachweise('slg')[0].datum)+' (Fach-Einsatzkraft Sanität)'};
  if(code==='tf'&&!hat('tf')&&hat('gfue')) return {s:'ok',text:'im Gruppenführer-Lehrgang vom '+fmt(nachweise('gfue')[0].datum)+' enthalten'};
  if(code==='modul_12'&&!hat('modul_12')&&hundDaten().bhvt) return {s:'ok',text:'FCI-BH/VT vom '+fmt(hundDaten().bhvt)};
@@ -7596,7 +7598,19 @@ function init(){
      saveState(); if(n) setTimeout(()=>alert(n+' Nachweis(e) aus BARRY in den Ausbildungsstand übernommen.'),300); }catch(err){console.error(err)} return r; };
   const btn=$('btnBarryUebernahme'); }
 }
-window.TBPaket3={stufen,fristen,renderStand,renderPlan,nachtragDatei,trainingsDatei,barryNachweiseUebernehmen,KATALOG:K};
+/* Ausbildungsstand des aktiven Teams für Übungsvorschläge, Glücksrad, Übungsstufen und Ausbildungsweg */
+function ausbildungsstand(){
+ const sp=teamSparten(); const pr=sp.map(s=>({s,st:status('rh_pruef',{sparte:s})})).filter(y=>y.st.s==='ok'||y.st.s==='bald');
+ const ok=c=>{ const x=status(c); return x.s==='ok'||x.s==='bald'; };
+ const echt=c=>nachweise(c).length>0; const geprueft=pr.length>0, m11=echt('modul_11'), m12=echt('modul_12')||!!hundDaten().bhvt, m13=echt('modul_13');
+ const grund=(geprueft||m12)?3:(m11?2:1), rh=geprueft?3:((m11&&m12)?2:1);
+ const label=geprueft?'geprüftes Team ('+pr.map(y=>SPN[y.s]).join(', ')+')':((m11||m12)?'Vorprüfung teilweise bestanden':'in Ausbildung');
+ let einsatz='rot'; try{ einsatz=stufen().find(x=>x.id==='rhf').ampel; }catch(e){}
+ return {geprueft,m11,m12,m13,grund,rh,label,pruef:pr,einsatz};
+}
+function autoStufe(cat,max){ const a=ausbildungsstand(); const rhc=(typeof TBM_RH_CATS!=='undefined')?TBM_RH_CATS:new Set();
+ let s=rhc.has(cat)?a.rh:a.grund; if(cat==='welpen') s=1; return Math.max(1,Math.min(max||3,s)); }
+window.TBPaket3={ausbildungsstand,autoStufe,stufen,fristen,renderStand,renderPlan,nachtragDatei,trainingsDatei,barryNachweiseUebernehmen,KATALOG:K};
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>setTimeout(init,0)); else setTimeout(init,0);
 })();
 </script>
@@ -7658,6 +7672,12 @@ function stationen(){
  S.push({id:'einsatz',n:S.filter(x=>x.n).length+1,t:'Prüfung & Einsatzfähigkeit',d:'Theorie, Helferarbeit, Funk & Orientierung, Unterkunft und Fitness – damit das Team auch im Einsatz sicher bleibt.',
   c:'r',stand:'Begleitend zu allen Stationen',
   links:[['Ausbildungsstand (Ampel)','hfquali',1],['Prüfung planen & Generalprobe','pruefplan'],['Theorie-Ausbildung','theorie'],['Helferschulung','helferschulung'],['Übungen: Funk & Orientierung','bib:funkorient'],['Übungen: Fitness','bib:fitness'],['Einsatzunterkunft','bib:unterkunft'],['Bonus-Einsatzfelder','bonus']]});
+ try{ const A=window.TBPaket3&&TBPaket3.ausbildungsstand?TBPaket3.ausbildungsstand():null;
+  if(A){ const set=(id,txt)=>{const x=S.find(y=>y.id===id); if(x&&x.c!=='g'){x.c='g'; x.stand=txt+(x.stand?' · '+x.stand:''); if(x.bar!=null)x.bar=1;}};
+   if(A.m12) set('m12','Modul 1.2 bestanden'); if(A.m11) set('m11','Modul 1.1 bestanden'); if(A.m13) set('m13','Modul 1.3 bestanden');
+   if(A.geprueft){ const t='Suchprüfung bestanden: '+A.label; ['fundament','motivation','m11','m12','anzeige','sparte'].forEach(id=>set(id,t)); }
+   const e=S.find(y=>y.id==='einsatz'); if(e){ e.c={gruen:'g',gelb:'y'}[A.einsatz]||(A.geprueft?'y':'r'); e.stand=(A.einsatz==='gruen'?'Einsatzfähig laut Ausbildungsstand':A.einsatz==='gelb'?'Einsatzfähig – Fristen beachten':'Ausbildungsstand prüfen')+' · '+e.stand; }
+  } }catch(err){}
  return S;
 }
 function aktuelle(S){const st=S.filter(x=>x.n);const vor=st.filter(x=>['m11','m12','m13'].includes(x.id)&&x.c!=='n');
