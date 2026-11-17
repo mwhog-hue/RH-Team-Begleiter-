@@ -7268,13 +7268,14 @@ const K=[
  {c:'ekga_s',l:'EKGA-S – Grundausbildung Sanität',g:'Grundausbildung',ue:10},
  {c:'ekga_b',l:'EKGA-B – Grundausbildung Betreuung',g:'Grundausbildung',ue:10},
  {c:'ekga_t',l:'EKGA-T – Grundausbildung Technik',g:'Grundausbildung',ue:10},
+ {c:'tus',l:'TuS – Einsatzkräftegrundausbildung Technik und Sicherheit',g:'Grundausbildung',h:'Vorgänger der EKGA-T; wird als EKGA-T angerechnet (Festlegung der Staffel).'},
  // Fachausbildung
  {c:'slg',l:'SLG – Sanitätslehrgang inkl. Prüfung',g:'Fachausbildung',ue:64,h:'Ersetzt die EH-Wiederholung; zählt ab Datum als HLW/AED-Nachweis.'},
- {c:'ekf_pruef',l:'EKF.Prüf – Fachbezogene Prüfung',g:'Fachausbildung',ue:2},
+ {c:'ekf_pruef',l:'EKF.Prüf – Fachbezogene Prüfung',g:'Fachausbildung',ue:2,h:'Mit der Prüfung zum Sanitätslehrgang (SLG) erfüllt.'},
  {c:'bos',l:'BOS – Sprechfunkausbildung',g:'Fachausbildung',ue:20,h:'Laut Dienstanweisung Hessen 8.1 Teil der Qualifikation; die Übersicht 2023 führt BOS als empfohlen, die Staffel als Pflicht (11.10.2026).'},
  {c:'rhd',l:'RHd – Fachdienstausbildung Rettungshund',g:'Fachausbildung',ue:35},
  {c:'rhd_ehhund',l:'RHd · Erste Hilfe am Hund',g:'Fachausbildung'},
- {c:'tf',l:'TF – Truppführer/in (online)',g:'Fachausbildung',ue:3},
+ {c:'tf',l:'TF – Truppführer/in (online)',g:'Fachausbildung',ue:3,h:'Im Gruppenführer-Lehrgang (GFü) enthalten.'},
  // Prüfungen
  {c:'modul_10',l:'Modul 1.0 – Fachfragen',g:'Prüfungen',h:'Einmalig je Sparte vor der ersten Suchprüfung (PO 2024, 1.5).'},
  {c:'modul_11',l:'Modul 1.1 – Verhalten und Grundfertigkeiten',g:'Prüfungen',hund:1},
@@ -7303,7 +7304,11 @@ const KQ=c=>K.find(x=>x.c===c)||{c,l:c,g:'Sonstiges'};
 /* ---------- Daten ---------- */
 function Q(){ if(!state.hfQuali||typeof state.hfQuali!=='object') state.hfQuali={nachweise:[],hund:{},pruefplan:{},generalproben:[]};
  const q=state.hfQuali; ['nachweise','generalproben'].forEach(k=>{if(!Array.isArray(q[k]))q[k]=[]}); if(!q.hund)q.hund={}; if(!q.pruefplan)q.pruefplan={}; return q; }
-function nachweise(code){ return Q().nachweise.filter(n=>n.code===code).sort((a,b)=>String(b.datum||'').localeCompare(String(a.datum||''))); }
+/* Hundebezogene Nachweise (Module, Suchprüfung) gelten nur für das jeweilige Team */
+function teamPasst(n){ const t=activeTeam()||{}; const hid=t.barry&&t.barry.hundId; if(n.teamId) return n.teamId===t.id; if(n.hundId) return !hid || n.hundId===hid; return true; }
+function nachweise(code){ const hund=KQ(code).hund; return Q().nachweise.filter(n=>n.code===code&&(!hund||teamPasst(n))).sort((a,b)=>String(b.datum||'').localeCompare(String(a.datum||''))); }
+function hundDaten(){ const q=Q(); if(!q.hunde||typeof q.hunde!=='object') q.hunde={}; const t=activeTeam()||{}; const k=t.id||'_';
+  if(!q.hunde[k]){ q.hunde[k]=Object.keys(q.hunde).length===0&&q.hund&&Object.keys(q.hund).length?Object.assign({},q.hund):{}; } return q.hunde[k]; }
 function hat(code){ return nachweise(code).length>0; }
 function hatSan(){ return hat('slg'); }
 
@@ -7314,7 +7319,10 @@ function status(code, opt){
  opt=opt||{}; const q=KQ(code); const h=heute();
  if(code==='eh'&&hatSan()) return {s:'ok',text:'durch Sanitätslehrgang ersetzt'};
  if(code==='rke_online'&&hat('rke')) return {s:'ok',text:'durch vollständiges RKE erfüllt'};
- if(code==='modul_12'&&!hat('modul_12')&&Q().hund.bhvt) return {s:'ok',text:'FCI-BH/VT vom '+fmt(Q().hund.bhvt)};
+ if(code==='ekga_t'&&!hat('ekga_t')&&hat('tus')) return {s:'ok',text:'durch TuS (Vorgänger der EKGA-T) vom '+fmt(nachweise('tus')[0].datum)};
+ if(code==='ekf_pruef'&&!hat('ekf_pruef')&&hat('slg')) return {s:'ok',text:'mit der Prüfung zum Sanitätslehrgang vom '+fmt(nachweise('slg')[0].datum)+' (Fach-Einsatzkraft Sanität)'};
+ if(code==='tf'&&!hat('tf')&&hat('gfue')) return {s:'ok',text:'im Gruppenführer-Lehrgang vom '+fmt(nachweise('gfue')[0].datum)+' enthalten'};
+ if(code==='modul_12'&&!hat('modul_12')&&hundDaten().bhvt) return {s:'ok',text:'FCI-BH/VT vom '+fmt(hundDaten().bhvt)};
  if(code==='hlw'){ const n=nachweise('hlw')[0], s=nachweise('slg')[0]; const best=[n,s].filter(Boolean).sort((a,b)=>String(b.datum).localeCompare(String(a.datum)))[0];
    if(!best) return {s:'fehlt'}; return jahrStatus(best.datum, best===s?'aus Sanitätslehrgang':''); }
  if(q.ueKonto){ const anker=nachweise('slg')[0]; if(!anker) return {s:'na',text:'erst nach dem Sanitätslehrgang'};
@@ -7363,12 +7371,14 @@ function stufen(){
     else gut.forEach(y=>(y.st.s==='bald'?bald:ok).push({c:'rh_pruef',st:y.st,sp:y.s})); }
   if(x.ehHund){ const a=status('ehhund_fb'), b=status('rhd_ehhund'); if(a.s==='fehlt'&&b.s==='fehlt') fehlt.push({c:'rhd_ehhund',st:{s:'fehlt',text:'Erste Hilfe am Hund mindestens einmal nachweisen'}});
     else if(a.s==='abgelaufen') bald.push({c:'ehhund_fb',st:a}); }
-  if(x.hund){ const hd=Q().hund; if(!hd.impfung) fehlt.push({c:'_impf',st:{s:'fehlt'},l:'Hund: gültiger Impfschutz (Staupe, Tollwut, Parvovirose, Leptospirose, Hepatitis)'});
+  if(x.hund){ const hd=hundDaten(); if(!hd.impfung) fehlt.push({c:'_impf',st:{s:'fehlt'},l:'Hund: gültiger Impfschutz (Staupe, Tollwut, Parvovirose, Leptospirose, Hepatitis)'});
     else if(tageBis(hd.impfung)<0) fehlt.push({c:'_impf',st:{s:'abgelaufen',text:'abgelaufen am '+fmt(hd.impfung)},l:'Hund: Impfschutz'});
     if(!hd.chip) fehlt.push({c:'_chip',st:{s:'fehlt'},l:'Hund: Heimtier- oder Impfausweis mit Chipnummer'});
     if(!hd.gesund) bald.push({c:'_ges',st:{s:'bald',text:'vor der Prüfung bestätigen'},l:'Hund: tierärztlicher Gesundheitsnachweis (Hessen 3)'}); }
   if(x.generalprobe){ const gp=Q().generalproben.filter(g=>g.ergebnis==='bestanden'); if(!gp.length) bald.push({c:'_gp',st:{s:'bald',text:'empfohlen vor dem Prüfungstermin'},l:'Generalprobe unter Prüfungsbedingungen'}); }
   const hinweise=(x.hinweis||[]).map(c=>({c,st:status(c)})).filter(y=>y.st.s!=='ok'&&y.st.s!=='na');
+  if(x.id==='pruef'){ const best=sp.map(s=>({s,st:status('rh_pruef',{sparte:s})})).filter(y=>y.st.s==='ok'||y.st.s==='bald');
+    if(best.length){ fehlt.length=0; bald.length=0; ok.unshift(...best.map(y=>({c:'rh_pruef',sp:y.s,st:{s:'ok',text:'Suchprüfung bestanden – '+(y.st.text||'')}}))); } }
   const empf=(x.empf||[]).filter(c=>status(c).s!=='ok');
   const ampel=fehlt.length?'rot':(bald.length?'gelb':'gruen');
   return Object.assign({},x,{fehlt,bald,ok,hinweise,empfOffen:empf,ampel});
@@ -7414,10 +7424,10 @@ function renderStand(){
   <div class="btn-row"><button class="btn primary" type="button" id="p3Add">Eintragen</button></div>
  </div>
  <div class="card"><h3>Hund: Nachweise für die Prüfung</h3>
-  <div class="formrow inline"><div><label for="p3Impf">Impfschutz gültig bis</label><input type="date" id="p3Impf" value="${E(Q().hund.impfung||'')}"></div>
-  <div><label for="p3Bh">FCI-BH/VT bestanden am (ersetzt Modul 1.2)</label><input type="date" id="p3Bh" value="${E(Q().hund.bhvt||'')}"></div></div>
-  <label class="done"><input type="checkbox" id="p3Chip" ${Q().hund.chip?'checked':''}> <span>Heimtier- oder Impfausweis mit Chipnummer vorhanden</span></label>
-  <label class="done"><input type="checkbox" id="p3Ges" ${Q().hund.gesund?'checked':''}> <span>Tierärztlicher Gesundheitsnachweis liegt vor</span></label>
+  <div class="formrow inline"><div><label for="p3Impf">Impfschutz gültig bis</label><input type="date" id="p3Impf" value="${E(hundDaten().impfung||'')}"></div>
+  <div><label for="p3Bh">FCI-BH/VT bestanden am (ersetzt Modul 1.2)</label><input type="date" id="p3Bh" value="${E(hundDaten().bhvt||'')}"></div></div>
+  <label class="done"><input type="checkbox" id="p3Chip" ${hundDaten().chip?'checked':''}> <span>Heimtier- oder Impfausweis mit Chipnummer vorhanden</span></label>
+  <label class="done"><input type="checkbox" id="p3Ges" ${hundDaten().gesund?'checked':''}> <span>Tierärztlicher Gesundheitsnachweis liegt vor</span></label>
  </div>
  <div class="card"><h3>Eingetragene Nachweise (${Q().nachweise.length})</h3>${Q().nachweise.length?`<ul class="p3-list">${Q().nachweise.slice().sort((a,b)=>String(b.datum).localeCompare(String(a.datum))).map(n=>`<li>${E(fmt(n.datum))} · ${E(KQ(n.code).l)}${n.sparte?' · '+E(SPN[n.sparte]||n.sparte):''}${n.ue?' · '+E(n.ue)+' UE':''}${n.thema?' · '+E(n.thema):''}${n.quelle==='BARRY'?' <small class="p3-src">aus BARRY</small>':''} <button class="btn small" type="button" data-p3del="${E(n.id)}">Löschen</button></li>`).join('')}</ul>`:'<p class="muted">Noch keine Nachweise. Tipp: „Aus BARRY übernehmen“ im Profil liest Ihre Nachweise mit ein.</p>'}
   <div class="btn-row"><button class="btn" type="button" id="p3ZuBarry">⬆ An BARRY zurückgeben</button><button class="btn" type="button" data-p3go="pruefplan">🗓 Prüfung planen</button></div></div>`;
@@ -7427,8 +7437,8 @@ function renderStand(){
   Q().nachweise.push({id:'n-'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),code:q.c,datum:d,sparte:q.sp?$('p3Sparte').value:undefined,ue:$('p3Ue').value||q.ue||undefined,thema:$('p3Thema').value.trim()||undefined,teamId:q.hund?(activeTeam()||{}).id:undefined,quelle:'Team-Begleiter',erfasstAm:new Date().toISOString()});
   saveState(); renderStand(); };
  host.querySelectorAll('[data-p3del]').forEach(b=>b.onclick=()=>{ if(!confirm('Diesen Nachweis löschen?'))return; Q().nachweise=Q().nachweise.filter(n=>n.id!==b.dataset.p3del); saveState(); renderStand(); });
- [['p3Impf','impfung'],['p3Bh','bhvt']].forEach(([id,k])=>$(id).onchange=e=>{Q().hund[k]=e.target.value; saveState(); renderStand();});
- [['p3Chip','chip'],['p3Ges','gesund']].forEach(([id,k])=>$(id).onchange=e=>{Q().hund[k]=e.target.checked; saveState(); renderStand();});
+ [['p3Impf','impfung'],['p3Bh','bhvt']].forEach(([id,k])=>$(id).onchange=e=>{hundDaten()[k]=e.target.value; saveState(); renderStand();});
+ [['p3Chip','chip'],['p3Ges','gesund']].forEach(([id,k])=>$(id).onchange=e=>{hundDaten()[k]=e.target.checked; saveState(); renderStand();});
  $('p3ZuBarry').onclick=rueckgabeDialog;
  host.querySelectorAll('[data-p3go]').forEach(b=>b.onclick=()=>{showView(b.dataset.p3go);window.scrollTo({top:0})});
 }
@@ -7527,9 +7537,11 @@ function barryNachweiseUebernehmen(daten, personId){
  const quali=daten.qualifikationen||[]; const code=id=>(quali.find(q=>q.id===id)||{}).code||'';
  const bekannt=new Set(K.map(k=>k.c)); let n=0;
  (daten.personQualifikationen||[]).filter(pq=>pq&&pq.personId===personId).forEach(pq=>{
-  const c=code(pq.qualifikationId); if(!bekannt.has(c)) return; const d=String(pq.datum||'').slice(0,10);
-  if(Q().nachweise.some(x=>x.code===c&&x.datum===d&&(x.sparte||'')===(pq.sparte||''))) return;
-  Q().nachweise.push({id:'b-'+(pq.id||Math.random().toString(36).slice(2)),code:c,datum:d,gueltigBis:pq.gueltigBis||undefined,sparte:pq.sparte||undefined,ue:pq.ue||undefined,thema:pq.thema||undefined,quelle:'BARRY',unbestaetigt:!!(pq.vomMitglied&&!pq.bestaetigt)}); n++; });
+  let c=code(pq.qualifikationId);
+  if(!bekannt.has(c) && pq.anrechnung && pq.anrechnung!=='san_fb_offen' && bekannt.has(pq.anrechnung)) c=pq.anrechnung;   // Lerncampus-Nachweise mit Anrechnung (wie in BARRY)
+  if(!bekannt.has(c)) return; const d=String(pq.datum||'').slice(0,10);
+  if(Q().nachweise.some(x=>x.code===c&&x.datum===d&&(x.sparte||'')===(pq.sparte||'')&&(x.hundId||'')===(pq.hundId||''))) return;
+  Q().nachweise.push({id:'b-'+(pq.id||Math.random().toString(36).slice(2)),code:c,datum:d,gueltigBis:pq.gueltigBis||undefined,sparte:pq.sparte||undefined,hundId:pq.hundId||undefined,ue:pq.ue||pq.stunden||undefined,thema:pq.thema||pq.plakette||undefined,quelle:'BARRY',unbestaetigt:!!(pq.vomMitglied&&!pq.bestaetigt)}); n++; });
  return n;
 }
 
@@ -7576,7 +7588,9 @@ function init(){
  // Übernahme aus BARRY: Nachweise der Person mitnehmen
  if(typeof window.barryUebernehmen==='function'){ const ob=window.barryUebernehmen; window.barryUebernehmen=function(){ let u=null; try{ u=(typeof barryUi!=='undefined')?barryUi:null; }catch(e){}
    const e=u&&u.teams?u.teams.find(x=>x.key===u.key):null; const daten=u&&u.daten; const r=ob.apply(this,arguments);
-   try{ const n=barryNachweiseUebernehmen(daten, e&&e.personId); if(n){ saveState(); setTimeout(()=>alert(n+' Nachweis(e) aus BARRY in den Ausbildungsstand übernommen.'),300); } }catch(err){console.error(err)} return r; };
+   try{ const n=barryNachweiseUebernehmen(daten, e&&e.personId);
+     try{ if(e&&e.hund){ const hd=hundDaten(); if(e.hund.chipnummer) hd.chip=true; } }catch(_){}
+     saveState(); if(n) setTimeout(()=>alert(n+' Nachweis(e) aus BARRY in den Ausbildungsstand übernommen.'),300); }catch(err){console.error(err)} return r; };
   const btn=$('btnBarryUebernahme'); }
 }
 window.TBPaket3={stufen,fristen,renderStand,renderPlan,nachtragDatei,trainingsDatei,barryNachweiseUebernehmen,KATALOG:K};
