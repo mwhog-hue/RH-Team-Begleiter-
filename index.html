@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
-<title>Team-Begleiter Rettungshund · v3.0.0</title>
+<title>Team-Begleiter Rettungshund · v3.1.0</title>
 <script>(function(){try{var t=localStorage.getItem('tbrh:theme');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light')}catch(e){document.documentElement.setAttribute('data-theme','light')}})();</script>
 <style>
 :root{
@@ -440,6 +440,19 @@ header.top .brand-row{gap:8px;align-items:center}
 #sp-root .sp-team{display:flex;justify-content:space-between;align-items:center;gap:6px;border-bottom:1px solid var(--line,#d8d0bb);padding:4px 0;text-align:left}
 #sp-root .sp-team .sp-btn{padding:4px 10px}
 #sp-root input{flex:1;min-width:140px;padding:8px;border:1.5px solid var(--line,#d8d0bb);border-radius:10px;font:inherit}
+</style>
+<style id="p3-style">.p3-ampelreihe{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 4px}
+.p3-chip{padding:6px 10px;border-radius:999px;font-size:.82rem;font-weight:700;text-decoration:none;border:1px solid var(--line,#ccc);color:inherit}
+.p3-chip.rot{background:#fdeceb;border-color:#e3a39d}.p3-chip.gelb{background:#fff6dc;border-color:#e6c766}.p3-chip.gruen{background:#e7f5ea;border-color:#8fc79b}
+[data-theme="dark"] .p3-chip.rot{background:#4a2321}[data-theme="dark"] .p3-chip.gelb{background:#44391a}[data-theme="dark"] .p3-chip.gruen{background:#1f3b26}
+.p3-stufe{border-left:5px solid #999}.p3-stufe.rot{border-left-color:#c8463c}.p3-stufe.gelb{border-left-color:#c98a00}.p3-stufe.gruen{border-left-color:#2f8a46}
+.p3-stufe>summary{cursor:pointer;list-style:none}.p3-stufe h4{margin:12px 0 4px;font-size:.9rem}
+.p3-list{list-style:none;padding:0;margin:4px 0}.p3-list li{padding:5px 0;border-bottom:1px dashed var(--line,#ddd);font-size:.88rem;line-height:1.35}
+.p3-list li .btn.small{margin-left:6px;padding:2px 8px;font-size:.75rem}
+.p3-sym{display:inline-block;width:1.3em;text-align:center;font-weight:800}.p3-sym.ok{color:#2f8a46}.p3-sym.fehlt,.p3-sym.abgelaufen{color:#c8463c}.p3-sym.bald,.p3-sym.offen{color:#c98a00}
+.p3-next{margin:8px 0 0;padding:8px 10px;border-radius:8px;background:var(--soft,#f3f1ec)}
+.p3-frist{border-left:5px solid #c98a00}.p3-src{opacity:.7}.p3-ueb{margin-top:12px;padding-top:10px;border-top:1px solid var(--line,#ddd)}
+.p3-rueck{border:2px solid #2f6f8a}
 </style>
 </head>
 <body>
@@ -7079,6 +7092,350 @@ render();
 window.Trainingsspiele={render};
 })();
 </script>
+<script id="p3-script">/* Team-Begleiter 3.1 · Paket 3
+   1) Ausbildungsstand der Hundeführerin / des Hundeführers mit Ampel (Helfer/in → RH-Helfer/in → prüfungsbereit → einsatzfähig)
+   2) Fristen & Fortbildungen
+   3) Prüfung planen & Generalprobe
+   4) Rückgabe an BARRY (Nachtragsdatei + Trainingsnachweis rhs-exchange v3)
+   5) Erweiterte Problembehandlung mit verknüpften Übungen
+   Grundlagen: DRK-PO Rettungshundeteams 2024 (Kap. 1.5, 1.10.4, 6), Rettungshundearbeit in Hessen (24.08.2023, Ziff. 2, 3, 8),
+   Übersichten „Notwendige Qualifikation für Position“ (31.08.2023) und die Festlegungen der Staffel, wie sie in BARRY hinterlegt sind
+   (gleiche Kurs-Codes, damit der Austausch ohne Umschlüsseln funktioniert). */
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const E=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const heute=()=>new Date().toISOString().slice(0,10);
+const fmt=d=>{if(!d)return '–';const p=String(d).slice(0,10).split('-');return p.length===3?p[2]+'.'+p[1]+'.'+p[0]:d};
+const addMonate=(d,m)=>{const x=new Date(d+'T12:00:00');if(isNaN(x))return '';x.setMonth(x.getMonth()+m);return x.toISOString().slice(0,10)};
+const tageBis=d=>Math.round((new Date(d+'T12:00:00')-new Date(heute()+'T12:00:00'))/86400000);
+
+/* ---------- Katalog (Codes wie in BARRY) ---------- */
+const K=[
+ // Grundausbildung Einsatzkraft Bereitschaft
+ {c:'rke',l:'RKE – Rotkreuz-Einführungsseminar',g:'Grundausbildung',ue:9},
+ {c:'rke_online',l:'RKE – Online-Teil',g:'Grundausbildung',h:'Reicht laut Staffel-Festlegung (03.10.2026) als Mindestvoraussetzung für Helfer/innen; Präsenzteil nachholen.'},
+ {c:'eh',l:'EH – Erste Hilfe',g:'Grundausbildung',ue:9,int:24,h:'Wiederholung alle 2 Jahre nur ohne Sanitätsausbildung.'},
+ {c:'ds',l:'DS – Datenschutz (online)',g:'Grundausbildung',ue:2},
+ {c:'ekga_e',l:'EKGA-E – Grundausbildung Einsatz',g:'Grundausbildung',ue:10},
+ {c:'ekga_s',l:'EKGA-S – Grundausbildung Sanität',g:'Grundausbildung',ue:10},
+ {c:'ekga_b',l:'EKGA-B – Grundausbildung Betreuung',g:'Grundausbildung',ue:10},
+ {c:'ekga_t',l:'EKGA-T – Grundausbildung Technik',g:'Grundausbildung',ue:10},
+ // Fachausbildung
+ {c:'slg',l:'SLG – Sanitätslehrgang inkl. Prüfung',g:'Fachausbildung',ue:64,h:'Ersetzt die EH-Wiederholung; zählt ab Datum als HLW/AED-Nachweis.'},
+ {c:'ekf_pruef',l:'EKF.Prüf – Fachbezogene Prüfung',g:'Fachausbildung',ue:2},
+ {c:'bos',l:'BOS – Sprechfunkausbildung',g:'Fachausbildung',ue:20,h:'Laut Dienstanweisung Hessen 8.1 Teil der Qualifikation; die Übersicht 2023 führt BOS als empfohlen, die Staffel als Pflicht (11.10.2026).'},
+ {c:'rhd',l:'RHd – Fachdienstausbildung Rettungshund',g:'Fachausbildung',ue:35},
+ {c:'rhd_ehhund',l:'RHd · Erste Hilfe am Hund',g:'Fachausbildung'},
+ {c:'tf',l:'TF – Truppführer/in (online)',g:'Fachausbildung',ue:3},
+ // Prüfungen
+ {c:'modul_10',l:'Modul 1.0 – Fachfragen',g:'Prüfungen',h:'Einmalig je Sparte vor der ersten Suchprüfung (PO 2024, 1.5).'},
+ {c:'modul_11',l:'Modul 1.1 – Verhalten und Grundfertigkeiten',g:'Prüfungen',hund:1},
+ {c:'modul_12',l:'Modul 1.2 – Grundgehorsam (oder FCI-BH/VT)',g:'Prüfungen',hund:1,h:'Kann durch eine bestandene FCI-Begleithundeprüfung ersetzt werden (PO 2024, 1.5).'},
+ {c:'modul_13',l:'Modul 1.3 – Gewandtheit',g:'Prüfungen',hund:1,h:'Nach PO 2024 nur für die Trümmersuche; die Staffel verlangt sie laut BARRY für alle.'},
+ {c:'rh_pruef',l:'Modul 2 – Suchprüfung (RH-Prüf)',g:'Prüfungen',ue:4,int:24,hund:1,sp:1,h:'Muss innerhalb von 24 Monaten wiederholt werden (PO 2024, 1.10.4).'},
+ // Wiederkehrend
+ {c:'hlw',l:'HLW und AED (jährlich)',g:'Fortbildungen & Unterweisungen',int:12},
+ {c:'san_fb',l:'Sanitätsfortbildung (16 UE in 2 Jahren)',g:'Fortbildungen & Unterweisungen',ueKonto:{soll:16,monate:24}},
+ {c:'ehhund_fb',l:'Erste Hilfe am Hund – Auffrischung (alle 5 Jahre)',g:'Fortbildungen & Unterweisungen',int:60},
+ {c:'uvv_jaehrlich',l:'UVV-Unterweisung (jährlich)',g:'Fortbildungen & Unterweisungen',int:12},
+ {c:'ds_jaehrlich',l:'Datenschutzunterweisung (jährlich)',g:'Fortbildungen & Unterweisungen',int:12},
+ {c:'hygiene',l:'Hygieneunterweisung (jährlich)',g:'Fortbildungen & Unterweisungen',int:12},
+ {c:'rhd_fb',l:'Fortbildung Fachdienst Rettungshund',g:'Fortbildungen & Unterweisungen'},
+ // Empfohlen / weiter
+ {c:'psnv_g',l:'PSNV-G – Grundlagen',g:'Empfohlen & weiterführend',ue:16},
+ {c:'tie',l:'TiE – Technik und Logistik',g:'Empfohlen & weiterführend',ue:10},
+ {c:'heikat',l:'HEIKAT',g:'Empfohlen & weiterführend',ue:2},
+ {c:'rkas',l:'RKAS – Rotkreuz-Aufbauseminar',g:'Empfohlen & weiterführend',ue:16},
+ {c:'teukm',l:'TEuKM – Teamentwicklung und Konfliktmanagement',g:'Empfohlen & weiterführend',ue:16},
+ {c:'gfue',l:'GFü – Gruppenführer/in',g:'Empfohlen & weiterführend',ue:40},
+ {c:'eug',l:'EUG – Erwachsenengerechte Unterrichtsgestaltung',g:'Empfohlen & weiterführend'}
+];
+const KQ=c=>K.find(x=>x.c===c)||{c,l:c,g:'Sonstiges'};
+
+/* ---------- Daten ---------- */
+function Q(){ if(!state.hfQuali||typeof state.hfQuali!=='object') state.hfQuali={nachweise:[],hund:{},pruefplan:{},generalproben:[]};
+ const q=state.hfQuali; ['nachweise','generalproben'].forEach(k=>{if(!Array.isArray(q[k]))q[k]=[]}); if(!q.hund)q.hund={}; if(!q.pruefplan)q.pruefplan={}; return q; }
+function nachweise(code){ return Q().nachweise.filter(n=>n.code===code).sort((a,b)=>String(b.datum||'').localeCompare(String(a.datum||''))); }
+function hat(code){ return nachweise(code).length>0; }
+function hatSan(){ return hat('slg'); }
+
+/* Fristlogik wie BARRY: jährliche Nachweise nach Kalenderjahr (fällig ab 1.1. des Folgejahres, gültig bis 31.8.,
+   Nachfrist bis 30.11., ab 1.12. kritisch); sonst Datum + Intervall. */
+function jahresfrist(d){ const j=Number(String(d||'').slice(0,4)); if(!j) return null; const f=j+1; return {faelligAb:f+'-01-01',gueltigBis:f+'-08-31',nachfristBis:f+'-11-30'}; }
+function status(code, opt){
+ opt=opt||{}; const q=KQ(code); const h=heute();
+ if(code==='eh'&&hatSan()) return {s:'ok',text:'durch Sanitätslehrgang ersetzt'};
+ if(code==='rke_online'&&hat('rke')) return {s:'ok',text:'durch vollständiges RKE erfüllt'};
+ if(code==='modul_12'&&!hat('modul_12')&&Q().hund.bhvt) return {s:'ok',text:'FCI-BH/VT vom '+fmt(Q().hund.bhvt)};
+ if(code==='hlw'){ const n=nachweise('hlw')[0], s=nachweise('slg')[0]; const best=[n,s].filter(Boolean).sort((a,b)=>String(b.datum).localeCompare(String(a.datum)))[0];
+   if(!best) return {s:'fehlt'}; return jahrStatus(best.datum, best===s?'aus Sanitätslehrgang':''); }
+ if(q.ueKonto){ const anker=nachweise('slg')[0]; if(!anker) return {s:'na',text:'erst nach dem Sanitätslehrgang'};
+   const start=anker.datum; let von=start, bis=addMonate(start,q.ueKonto.monate); while(bis<h){ von=bis; bis=addMonate(von,q.ueKonto.monate); }
+   const ue=nachweise(code).filter(n=>n.datum>=von&&n.datum<=bis).reduce((s,n)=>s+(Number(n.ue)||0),0);
+   const rest=Math.max(0,q.ueKonto.soll-ue);
+   if(!rest) return {s:'ok',text:ue+' von '+q.ueKonto.soll+' UE bis '+fmt(bis)};
+   const t=tageBis(bis); return {s:t<=180?'bald':'offen',text:'noch '+rest+' UE bis '+fmt(bis),bis}; }
+ let liste=nachweise(code); if(opt.sparte) liste=liste.filter(n=>!n.sparte||n.sparte===opt.sparte);
+ const n=liste[0]; if(!n) return {s:'fehlt'};
+ if(!q.int) return {s:'ok',text:n.datum?'am '+fmt(n.datum):'erfasst',n};
+ if(q.int===12) return jahrStatus(n.datum,'',n);
+ const bis=n.gueltigBis||addMonate(n.datum,q.int); const t=tageBis(bis);
+ if(t<0) return {s:'abgelaufen',text:'abgelaufen am '+fmt(bis),bis,n};
+ if(t<=90) return {s:'bald',text:'läuft ab am '+fmt(bis)+' (in '+t+' Tagen)',bis,n};
+ return {s:'ok',text:'gültig bis '+fmt(bis),bis,n};
+}
+function jahrStatus(datum,zusatz,n){ const f=jahresfrist(datum), h=heute(); if(!f) return {s:'fehlt'};
+ const z=zusatz?' ('+zusatz+')':'';
+ if(h<f.faelligAb) return {s:'ok',text:'gültig, nächster Termin '+f.faelligAb.slice(0,4)+z,bis:f.gueltigBis,n};
+ if(h<=f.gueltigBis) return {s:'bald',text:'im Jahr '+f.faelligAb.slice(0,4)+' fällig – bis '+fmt(f.gueltigBis)+z,bis:f.gueltigBis,n};
+ if(h<=f.nachfristBis) return {s:'bald',text:'Nachfrist bis '+fmt(f.nachfristBis)+z,bis:f.nachfristBis,n};
+ return {s:'abgelaufen',text:'abgelaufen'+z,n}; }
+
+/* ---------- Stufen ---------- */
+function teamSparten(){ const t=activeTeam()||{}; const z=t.sparteZiel||{}; const s=['flaeche','truemmer','mantrailing'].filter(k=>z[k]); return s.length?s:[t.sparte||'flaeche']; }
+const SPN={flaeche:'Fläche',truemmer:'Trümmer',mantrailing:'Mantrailing'};
+function stufen(){
+ const sp=teamSparten();
+ const modulCodes=['modul_10','modul_11'].concat(sp.includes('mantrailing')&&sp.length===1?[]:['modul_12']).concat(['modul_13']);
+ const L=[
+  {id:'helfer',t:'Helfer/in – alarmierbar',q:'Staffel-Festlegung 01.10.2026 (in BARRY hinterlegt): Mindestvoraussetzung für alle ohne gültige Suchprüfung.',
+   pflicht:['eh','ekga_e','rke_online','ds','hlw'], empf:['rke','slg','bos'], hinweis:['ds_jaehrlich','uvv_jaehrlich']},
+  {id:'rhh',t:'Rettungshundehelfer/in – Ausbildung komplett',q:'Dienstanweisung Rettungshundearbeit Hessen 8.1 und Übersicht „Notwendige Qualifikation für Position“ (31.08.2023).',
+   pflicht:['eh','rke','ds','ekga_e','ekga_s','ekga_b','ekga_t','slg','ekf_pruef','bos','rhd','tf'], empf:['psnv_g','tie','heikat'], hinweis:['hlw','ds_jaehrlich','uvv_jaehrlich']},
+  {id:'pruef',t:'Prüfungsbereit – Zulassung zur Suchprüfung',q:'PO 2024, 1.5 (Module 1.0–1.3, Kenntnisse), Hessen 3 (Gesundheitsnachweis, Unterlagen 14 Tage vorher) und Staffel-Festlegung.',
+   pflicht:['eh','rke','ds','ekga_e','ekga_s','ekga_b','ekga_t','slg','ekf_pruef','bos','rhd'].concat(modulCodes), hund:true, generalprobe:true},
+  {id:'rhf',t:'Einsatzfähig als Rettungshundeführer/in',q:'Hessen 8.2 (Qualifikation Helfende + gültige RH-Prüfung), PO 2024 1.10.4 (24 Monate) und wiederkehrende Nachweise der Staffel.',
+   pflicht:['eh','rke','ds','ekga_e','ekga_s','ekga_b','ekga_t','slg','ekf_pruef','bos','rhd','tf','hlw'], spPruef:true, ehHund:true, hinweis:['uvv_jaehrlich','ds_jaehrlich','hygiene','san_fb']}
+ ];
+ return L.map(x=>{
+  const fehlt=[], bald=[], ok=[];
+  x.pflicht.forEach(c=>{ const st=status(c); (st.s==='ok'?ok:(st.s==='bald'?bald:fehlt)).push({c,st}); });
+  if(x.spPruef){ const g=sp.map(s=>({s,st:status('rh_pruef',{sparte:s})})); const gut=g.filter(y=>y.st.s==='ok'||y.st.s==='bald');
+    if(!gut.length) fehlt.push({c:'rh_pruef',st:{s:'fehlt',text:'keine gültige Suchprüfung ('+sp.map(s=>SPN[s]).join(', ')+')'}});
+    else gut.forEach(y=>(y.st.s==='bald'?bald:ok).push({c:'rh_pruef',st:y.st,sp:y.s})); }
+  if(x.ehHund){ const a=status('ehhund_fb'), b=status('rhd_ehhund'); if(a.s==='fehlt'&&b.s==='fehlt') fehlt.push({c:'rhd_ehhund',st:{s:'fehlt',text:'Erste Hilfe am Hund mindestens einmal nachweisen'}});
+    else if(a.s==='abgelaufen') bald.push({c:'ehhund_fb',st:a}); }
+  if(x.hund){ const hd=Q().hund; if(!hd.impfung) fehlt.push({c:'_impf',st:{s:'fehlt'},l:'Hund: gültiger Impfschutz (Staupe, Tollwut, Parvovirose, Leptospirose, Hepatitis)'});
+    else if(tageBis(hd.impfung)<0) fehlt.push({c:'_impf',st:{s:'abgelaufen',text:'abgelaufen am '+fmt(hd.impfung)},l:'Hund: Impfschutz'});
+    if(!hd.chip) fehlt.push({c:'_chip',st:{s:'fehlt'},l:'Hund: Heimtier- oder Impfausweis mit Chipnummer'});
+    if(!hd.gesund) bald.push({c:'_ges',st:{s:'bald',text:'vor der Prüfung bestätigen'},l:'Hund: tierärztlicher Gesundheitsnachweis (Hessen 3)'}); }
+  if(x.generalprobe){ const gp=Q().generalproben.filter(g=>g.ergebnis==='bestanden'); if(!gp.length) bald.push({c:'_gp',st:{s:'bald',text:'empfohlen vor dem Prüfungstermin'},l:'Generalprobe unter Prüfungsbedingungen'}); }
+  const hinweise=(x.hinweis||[]).map(c=>({c,st:status(c)})).filter(y=>y.st.s!=='ok'&&y.st.s!=='na');
+  const empf=(x.empf||[]).filter(c=>status(c).s!=='ok');
+  const ampel=fehlt.length?'rot':(bald.length?'gelb':'gruen');
+  return Object.assign({},x,{fehlt,bald,ok,hinweise,empfOffen:empf,ampel});
+ });
+}
+function fristen(){
+ const codes=['eh','hlw','san_fb','ehhund_fb','uvv_jaehrlich','ds_jaehrlich','hygiene'];
+ const out=[];
+ codes.forEach(c=>{ const st=status(c); if(st.s==='bald'||st.s==='abgelaufen') out.push({c,st}); });
+ teamSparten().forEach(s=>{ const st=status('rh_pruef',{sparte:s}); if(st.s==='bald'||st.s==='abgelaufen') out.push({c:'rh_pruef',st,sp:s}); });
+ const pp=Q().pruefplan; if(pp.datum&&tageBis(pp.datum)>=0){ const t=tageBis(pp.datum); if(t<=21) out.push({c:'_pp',st:{s:'bald',text:'Prüfung am '+fmt(pp.datum)+' (in '+t+' Tagen)'},l:'Prüfungstermin'}); }
+ return out;
+}
+
+/* ---------- Ansicht: Ausbildungsstand ---------- */
+const AMP={rot:['🔴','Es fehlt noch etwas'],gelb:['🟡','Erfüllt – Fristen oder Empfehlungen beachten'],gruen:['🟢','Erfüllt']};
+function zeile(x){ const l=x.l||(KQ(x.c).l+(x.sp?' · '+SPN[x.sp]:'')); const s=x.st||{}; const sym={ok:'✔',bald:'⏳',fehlt:'✖',abgelaufen:'⛔',offen:'⏳',na:'–'}[s.s]||'•';
+ return `<li><span class="p3-sym ${s.s||''}">${sym}</span> ${E(l)}${s.text?` <small>– ${E(s.text)}</small>`:''}</li>`; }
+function renderStand(){
+ const host=$('p3Stand'); if(!host) return;
+ const t=activeTeam()||{}; const L=stufen(); const fr=fristen();
+ let naechste=L.find(x=>x.ampel==='rot');
+ host.innerHTML=`<div class="card"><h2>Ausbildungsstand ${E(t.handler||'Hundeführer/in')}</h2>
+ <p class="muted" style="font-size:.86rem">Ampel nach DRK-PO 2024, Dienstanweisung Rettungshundearbeit Hessen (2023) und den Festlegungen der Staffel, wie sie in BARRY hinterlegt sind. Maßgeblich bleiben Testatheft, Helferakte bzw. drkserver.</p>
+ <div class="p3-ampelreihe">${L.map(x=>`<a href="#p3-${x.id}" class="p3-chip ${x.ampel}">${AMP[x.ampel][0]} ${E(x.t.split(' – ')[0])}</a>`).join('')}</div>
+ ${naechste?`<p class="p3-next"><b>Nächste Stufe:</b> ${E(naechste.t)} – noch ${naechste.fehlt.length} Punkt${naechste.fehlt.length===1?'':'e'} offen.</p>`:'<p class="p3-next"><b>Alle Stufen erfüllt.</b> Fristen im Blick behalten.</p>'}
+ </div>
+ ${fr.length?`<div class="card p3-frist"><h3>⏰ Fristen & Fortbildungen</h3><ul class="p3-list">${fr.map(zeile).join('')}</ul></div>`:''}
+ ${L.map(x=>`<details class="card p3-stufe ${x.ampel}" id="p3-${x.id}" ${x===naechste?'open':''}><summary><b>${AMP[x.ampel][0]} ${E(x.t)}</b><br><small>${E(AMP[x.ampel][1])}</small></summary>
+  ${x.fehlt.length?`<h4>Fehlt bis zu dieser Stufe</h4><ul class="p3-list">${x.fehlt.map(zeile).join('')}</ul>`:''}
+  ${x.bald.length?`<h4>Bald fällig / empfohlen</h4><ul class="p3-list">${x.bald.map(zeile).join('')}</ul>`:''}
+  ${x.hinweise.length?`<h4>Wiederkehrende Nachweise (Hinweis)</h4><ul class="p3-list">${x.hinweise.map(zeile).join('')}</ul>`:''}
+  ${x.empfOffen&&x.empfOffen.length?`<h4>Empfohlen</h4><ul class="p3-list">${x.empfOffen.map(c=>zeile({c,st:{s:'offen'}})).join('')}</ul>`:''}
+  ${x.ok.length?`<details><summary>Erfüllt (${x.ok.length})</summary><ul class="p3-list">${x.ok.map(zeile).join('')}</ul></details>`:''}
+  <p class="muted" style="font-size:.78rem;margin-top:8px">Grundlage: ${E(x.q)}</p></details>`).join('')}
+ <div class="card"><h3>Kurs oder Nachweis eintragen</h3>
+  <div class="formrow inline"><div><label for="p3Code">Kurs / Nachweis</label><select id="p3Code">${[...new Set(K.map(k=>k.g))].map(g=>`<optgroup label="${E(g)}">${K.filter(k=>k.g===g).map(k=>`<option value="${k.c}">${E(k.l)}</option>`).join('')}</optgroup>`).join('')}</select></div>
+  <div><label for="p3Datum">Datum</label><input type="date" id="p3Datum" value="${heute()}"></div></div>
+  <div class="formrow inline"><div id="p3SpWrap" hidden><label for="p3Sparte">Sparte</label><select id="p3Sparte"><option value="flaeche">Fläche</option><option value="truemmer">Trümmer</option><option value="mantrailing">Mantrailing</option></select></div>
+  <div><label for="p3Ue">UE (optional)</label><input type="number" id="p3Ue" min="0" step="1"></div>
+  <div><label for="p3Thema">Thema / Bemerkung</label><input id="p3Thema" type="text" placeholder="z. B. Anbieter, Plakettennummer"></div></div>
+  <p class="muted" id="p3CodeHinweis" style="font-size:.8rem"></p>
+  <div class="btn-row"><button class="btn primary" type="button" id="p3Add">Eintragen</button></div>
+ </div>
+ <div class="card"><h3>Hund: Nachweise für die Prüfung</h3>
+  <div class="formrow inline"><div><label for="p3Impf">Impfschutz gültig bis</label><input type="date" id="p3Impf" value="${E(Q().hund.impfung||'')}"></div>
+  <div><label for="p3Bh">FCI-BH/VT bestanden am (ersetzt Modul 1.2)</label><input type="date" id="p3Bh" value="${E(Q().hund.bhvt||'')}"></div></div>
+  <label class="done"><input type="checkbox" id="p3Chip" ${Q().hund.chip?'checked':''}> <span>Heimtier- oder Impfausweis mit Chipnummer vorhanden</span></label>
+  <label class="done"><input type="checkbox" id="p3Ges" ${Q().hund.gesund?'checked':''}> <span>Tierärztlicher Gesundheitsnachweis liegt vor</span></label>
+ </div>
+ <div class="card"><h3>Eingetragene Nachweise (${Q().nachweise.length})</h3>${Q().nachweise.length?`<ul class="p3-list">${Q().nachweise.slice().sort((a,b)=>String(b.datum).localeCompare(String(a.datum))).map(n=>`<li>${E(fmt(n.datum))} · ${E(KQ(n.code).l)}${n.sparte?' · '+E(SPN[n.sparte]||n.sparte):''}${n.ue?' · '+E(n.ue)+' UE':''}${n.thema?' · '+E(n.thema):''}${n.quelle==='BARRY'?' <small class="p3-src">aus BARRY</small>':''} <button class="btn small" type="button" data-p3del="${E(n.id)}">Löschen</button></li>`).join('')}</ul>`:'<p class="muted">Noch keine Nachweise. Tipp: „Aus BARRY übernehmen“ im Profil liest Ihre Nachweise mit ein.</p>'}
+  <div class="btn-row"><button class="btn" type="button" id="p3ZuBarry">⬆ An BARRY zurückgeben</button><button class="btn" type="button" data-p3go="pruefplan">🗓 Prüfung planen</button></div></div>`;
+ const code=$('p3Code'), hint=()=>{const q=KQ(code.value); $('p3SpWrap').hidden=!q.sp; $('p3CodeHinweis').textContent=q.h||''; if(q.ue&&!$('p3Ue').value) $('p3Ue').placeholder=q.ue;};
+ code.onchange=hint; hint();
+ $('p3Add').onclick=()=>{ const q=KQ(code.value), d=$('p3Datum').value; if(!d){alert('Bitte ein Datum angeben.');return;}
+  Q().nachweise.push({id:'n-'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),code:q.c,datum:d,sparte:q.sp?$('p3Sparte').value:undefined,ue:$('p3Ue').value||q.ue||undefined,thema:$('p3Thema').value.trim()||undefined,teamId:q.hund?(activeTeam()||{}).id:undefined,quelle:'Team-Begleiter',erfasstAm:new Date().toISOString()});
+  saveState(); renderStand(); };
+ host.querySelectorAll('[data-p3del]').forEach(b=>b.onclick=()=>{ if(!confirm('Diesen Nachweis löschen?'))return; Q().nachweise=Q().nachweise.filter(n=>n.id!==b.dataset.p3del); saveState(); renderStand(); });
+ [['p3Impf','impfung'],['p3Bh','bhvt']].forEach(([id,k])=>$(id).onchange=e=>{Q().hund[k]=e.target.value; saveState(); renderStand();});
+ [['p3Chip','chip'],['p3Ges','gesund']].forEach(([id,k])=>$(id).onchange=e=>{Q().hund[k]=e.target.checked; saveState(); renderStand();});
+ $('p3ZuBarry').onclick=rueckgabeDialog;
+ host.querySelectorAll('[data-p3go]').forEach(b=>b.onclick=()=>{showView(b.dataset.p3go);window.scrollTo({top:0})});
+}
+
+/* ---------- Ansicht: Prüfung planen & Generalprobe ---------- */
+const CHECK=[
+ ['anmeldung','Anmeldung über die Staffelleitung auf dem Dienstweg (PO 1.6; Hessen 9.4)'],
+ ['unterlagen','Unterlagen spätestens 14 Tage vor Prüfungsbeginn vorgelegt bzw. im DRKserver (Hessen 3)'],
+ ['testat','Testatheft / Helferakte mit Modulen 1.0–1.3 aktuell'],
+ ['impf','Impfausweis bzw. EU-Heimtierausweis mit Chip eingepackt (PO 1.3, 1.4)'],
+ ['kenndecke','Kenndecke mit Organisationsabzeichen, Halsband abnehmbar (PO 6.2.3)'],
+ ['bestaetigung','Bestätigung nur feste Nahrung per Hand oder Spielzeug (PO 6.2.3)'],
+ ['psa','PSA, Funkgerät-Bedienung, Notizblock für die Lageorientierung'],
+ ['gesund','Hund und Hundeführer/in am Prüfungstag gesund; Hündin läufig? Dann am Schluss (PO 1.5)']
+];
+const GP_TEILE=[
+ ['lage','Lageorientierung höchstens 5 Minuten, Fragen selbst stellen, Notizen (PO 6.2.1)'],
+ ['taktik','Taktik ansagen, Abweichungen vorher mitteilen (PO 6.2.2)'],
+ ['suche','Fläche ca. 45.000 m², Zahl der Versteckpersonen unbekannt (max. 2), reine Suchzeit 30 Min. (PO 6)'],
+ ['verweis','Verweisen ohne Hilfe, Verbeller im 5-m-Umkreis; Meldung mit Hand- und Hörzeichen (PO 6.2.4)'],
+ ['meldung','Lagemeldung per Funk: Meldender, Standort, Maßnahmen, Nachforderung (PO 6.2.5)'],
+ ['betreuung','Hund sicher ablegen, Person betreuen bis zur Übernahme'],
+ ['gehorsam','Führigkeit: Abrufen, Richtung, Stopp – Hund bleibt im Suchgelände'],
+ ['fremd','Unbekanntes Gelände und fremde Versteckpersonen (wie in der Prüfung)']
+];
+function renderPlan(){
+ const host=$('p3Plan'); if(!host) return; const pp=Q().pruefplan; pp.check=pp.check||{};
+ const t=pp.datum?tageBis(pp.datum):null;
+ const plan=pp.datum?[[-56,'8 Wochen vorher','Module und Kurse prüfen (Ausbildungsstand-Ampel), Anmeldung anstoßen.'],[-28,'4 Wochen vorher','1. Generalprobe unter Prüfungsbedingungen, Schwächen gezielt trainieren.'],[-14,'2 Wochen vorher','Unterlagen vorlegen (Hessen: 14 Tage), 2. Generalprobe in fremdem Gelände.'],[-7,'1 Woche vorher','Nur noch Bekanntes festigen, keine neuen Übungen; Ausrüstung packen.'],[-1,'Vortag','Ruhe, kurzes Erfolgserlebnis, früh schlafen.']].map(([d,l,x])=>({d:addMonate(pp.datum,0)&&(()=>{const z=new Date(pp.datum+'T12:00:00');z.setDate(z.getDate()+d);return z.toISOString().slice(0,10)})(),l,x})):[];
+ const gp=Q().generalproben.slice().sort((a,b)=>String(b.datum).localeCompare(String(a.datum)));
+ host.innerHTML=`<div class="card"><h2>Prüfung planen</h2>
+ <div class="formrow inline"><div><label for="p3PDatum">Prüfungstermin</label><input type="date" id="p3PDatum" value="${E(pp.datum||'')}"></div>
+ <div><label for="p3PSparte">Sparte</label><select id="p3PSparte">${['flaeche','truemmer','mantrailing'].map(s=>`<option value="${s}" ${pp.sparte===s?'selected':''}>${SPN[s]}</option>`).join('')}</select></div>
+ <div><label for="p3POrt">Ort / Ausrichter</label><input id="p3POrt" value="${E(pp.ort||'')}"></div></div>
+ ${t!=null?`<p class="p3-next">${t>=0?`Noch <b>${t}</b> Tage bis zur Prüfung.`:'Der Termin liegt in der Vergangenheit – Ergebnis unter „Kurs oder Nachweis eintragen“ als Suchprüfung erfassen.'}</p>`:''}
+ ${plan.length?`<h4>Zeitplan</h4><ul class="p3-list">${plan.map(p=>`<li><span class="p3-sym ${p.d<heute()?'ok':''}">${p.d<heute()?'✔':'•'}</span> <b>${E(fmt(p.d))} · ${E(p.l)}</b> – ${E(p.x)}</li>`).join('')}</ul>`:''}
+ <h4>Checkliste</h4>${CHECK.map(([k,l])=>`<label class="done${pp.check[k]?' checked':''}"><input type="checkbox" data-p3chk="${k}" ${pp.check[k]?'checked':''}> <span>${E(l)}</span></label>`).join('')}
+ <div class="btn-row"><button class="btn" type="button" data-p3go="hfquali">🚦 Ausbildungsstand prüfen</button></div></div>
+ <div class="card"><h3>Generalprobe unter Prüfungsbedingungen</h3>
+ <p class="muted" style="font-size:.86rem">Ablauf wie Modul 2 der DRK-PO 2024 (Fläche). Am besten mit fremden Versteckpersonen, unbekanntem Gelände und einer Person, die wie das Prüferteam beobachtet. Der Flächensuchassistent im Prüfungsmodus führt Zeit und Protokoll.</p>
+ <div class="formrow inline"><div><label for="p3GDatum">Datum</label><input type="date" id="p3GDatum" value="${heute()}"></div><div><label for="p3GZeit">Reine Suchzeit (Min.)</label><input type="number" id="p3GZeit" min="0" max="90"></div><div><label for="p3GFunde">Gefunden / versteckt</label><input id="p3GFunde" placeholder="z. B. 2/2"></div></div>
+ ${GP_TEILE.map(([k,l])=>`<label class="done"><input type="checkbox" data-p3gp="${k}"> <span>${E(l)}</span></label>`).join('')}
+ <div class="formrow"><label for="p3GNotiz">Beobachtungen / Schwerpunkte</label><textarea id="p3GNotiz" rows="2"></textarea></div>
+ <div class="btn-row"><button class="btn primary" type="button" id="p3GSave">Generalprobe speichern</button></div>
+ ${gp.length?`<h4>Bisherige Generalproben</h4><ul class="p3-list">${gp.map(g=>`<li><span class="p3-sym ${g.ergebnis==='bestanden'?'ok':'bald'}">${g.ergebnis==='bestanden'?'✔':'⏳'}</span> ${E(fmt(g.datum))} · ${E(g.funde||'–')} · ${E(g.zeit?g.zeit+' Min.':'–')} · ${g.erfuellt}/${GP_TEILE.length} Teile${g.notiz?' · '+E(g.notiz):''} <button class="btn small" type="button" data-p3gdel="${E(g.id)}">Löschen</button></li>`).join('')}</ul>`:''}</div>`;
+ const sv=()=>{pp.datum=$('p3PDatum').value;pp.sparte=$('p3PSparte').value;pp.ort=$('p3POrt').value.trim();saveState();};
+ $('p3PDatum').onchange=()=>{sv();renderPlan()}; $('p3PSparte').onchange=sv; $('p3POrt').oninput=sv;
+ host.querySelectorAll('[data-p3chk]').forEach(c=>c.onchange=()=>{pp.check[c.dataset.p3chk]=c.checked;saveState();c.closest('label').classList.toggle('checked',c.checked)});
+ $('p3GSave').onclick=()=>{ const teile=[...host.querySelectorAll('[data-p3gp]')].filter(c=>c.checked).map(c=>c.dataset.p3gp);
+  const zeit=Number($('p3GZeit').value)||null, funde=$('p3GFunde').value.trim(); const m=funde.match(/(\d+)\s*\/\s*(\d+)/);
+  const alleGefunden=m?Number(m[1])>=Number(m[2]):false;
+  const erg=(teile.length===GP_TEILE.length&&alleGefunden&&(!zeit||zeit<=30))?'bestanden':'nachtrainieren';
+  Q().generalproben.push({id:'g-'+Date.now().toString(36),datum:$('p3GDatum').value,zeit,funde,teile,erfuellt:teile.length,ergebnis:erg,notiz:$('p3GNotiz').value.trim(),teamId:(activeTeam()||{}).id});
+  try{ const t=activeTeam(); if(t){ t.tagebuch=t.tagebuch||[]; t.tagebuch.push({id:'tb-'+Date.now().toString(36),datum:$('p3GDatum').value,bereich:'pruefung',ausfuehrung:Math.max(1,Math.round(teile.length/GP_TEILE.length*5)),findewille:'',notiz:'Generalprobe: '+(funde||'–')+(zeit?', '+zeit+' Min.':'')+(teile.length<GP_TEILE.length?', offen: '+GP_TEILE.filter(([k])=>!teile.includes(k)).map(x=>x[1].split(' (')[0]).join('; '):''),naechsterSchritt:$('p3GNotiz').value.trim(),quelle:'Generalprobe'}); } }catch(e){}
+  saveState(); renderPlan(); alert(erg==='bestanden'?'Generalprobe gespeichert: alle Teile erfüllt.':'Generalprobe gespeichert – offene Teile gezielt nachtrainieren. Ein Eintrag steht auch im Tagebuch.'); };
+ host.querySelectorAll('[data-p3gdel]').forEach(b=>b.onclick=()=>{ if(!confirm('Diese Generalprobe löschen?'))return; Q().generalproben=Q().generalproben.filter(g=>g.id!==b.dataset.p3gdel); saveState(); renderPlan(); });
+ host.querySelectorAll('[data-p3go]').forEach(b=>b.onclick=()=>{showView(b.dataset.p3go);window.scrollTo({top:0})});
+}
+
+/* ---------- Rückgabe an BARRY ---------- */
+function download(obj,name){ const blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); }
+const BEREICH_SPARTE={flaeche:'flaeche',truemmersuche:'truemmer',truemmer:'truemmer',mantrailing:'mantrailing',drk11:'modul11',drk12:'gehorsam',drk13:'gewandtheit',vdh:'begleithund',anzeigeaufbau:'anzeigeverhalten',findewille:'anzeigeverhalten',pruefung:'flaeche',einsatz:'flaeche',lernalltag:'alltag',abenteuer:'alltag'};
+function sicherName(s){ return String(s||'').replace(/[^\p{L}\p{N}-]+/gu,'_').slice(0,40)||'Team'; }
+function nachtragDatei(){ const t=activeTeam()||{}; const neu=Q().nachweise.filter(n=>n.quelle!=='BARRY');
+ return {exportInfo:{format:'barry-nachtrag',app:'Team-Begleiter',appVersion:'3.1',titel:'Nachweise aus dem Team-Begleiter – '+(t.handler||''),exportiertAm:new Date().toISOString()},
+  hinweis:'Im Team-Begleiter erfasste Nachweise. Bitte jede Zeile in BARRY prüfen und bestätigen; maßgeblich sind Bescheinigung, Testatheft bzw. drkserver.',
+  nachweise:neu.map(n=>({personId:(t.barry&&t.barry.personId)||undefined,person:t.handler||'',code:n.code,label:KQ(n.code).l,datum:n.datum,gueltigBis:n.gueltigBis,hund:KQ(n.code).hund?(t.dog||undefined):undefined,sparte:n.sparte,ue:n.ue,thema:n.thema,quelle:'Team-Begleiter'}))}; }
+function trainingsDatei(){ const t=activeTeam()||{}; const pid=(t.barry&&t.barry.personId)||('tb-p-'+(t.id||'')), hid=(t.barry&&t.barry.hundId)||('tb-h-'+(t.id||'')), tid='tb-t-'+(t.id||'');
+ let wegStand=[]; try{ wegStand=window.TBShell.stationen().filter(x=>x.n).map(x=>({station:x.t,ampel:{g:'sicher',y:'im Aufbau',r:'offen',n:'nicht erforderlich'}[x.c]||x.c,stand:x.stand||''})); }catch(e){}
+ const L=stufen().map(x=>({stufe:x.t,ampel:x.ampel,offen:x.fehlt.map(f=>f.l||KQ(f.c).l)}));
+ return {rhsFormat:'rhs-exchange',schemaVersion:3,packageType:'bundle',packageId:'tb-pkg-'+Date.now().toString(36),createdAt:new Date().toISOString(),
+  source:{app:'Team-Begleiter',appVersion:'3.1',instanceId:(state.instanceId||'')},
+  personen:[{id:pid,name:t.handler||''}], hunde:[{id:hid,name:t.dog||'',anzeigeart:t.anzeigeart||''}], teams:[{id:tid,personId:pid,hundId:hid,sparten:teamSparten()}],
+  records:(t.tagebuch||[]).map(e=>({type:'entry',id:'tb-'+(e.id||Math.random().toString(36).slice(2)),data:{teamId:tid,typ:e.bereich==='pruefung'?'pruefung':(e.bereich==='einsatz'?'einsatz':'training'),sparte:BEREICH_SPARTE[e.bereich]||'sonstiges',beginn:(e.datum||'')+'T00:00:00',ziel:(typeof TAGEBUCH_BEREICH_LABEL!=='undefined'&&TAGEBUCH_BEREICH_LABEL[e.bereich])||e.bereich||'',
+   bewertung:{ergebnis:'offen',hundeleistung:Number(e.ausfuehrung)||null,zusatzskalen:e.findewille?[{name:'Finde-/Arbeitswille',wert:Number(e.findewille)}]:[],naechsterSchritt:e.naechsterSchritt||'',freitext:''},notizen:e.notiz||'',quelle:{app:'Team-Begleiter',appVersion:'3.1',schemaVersion:3}},fieldMeta:{revision:1,updatedAt:new Date().toISOString()}})),
+  teamStand:{stand:new Date().toISOString(),ausbildungsweg:wegStand,qualifikationsstufen:L,generalproben:Q().generalproben,pruefplan:{datum:Q().pruefplan.datum||'',sparte:Q().pruefplan.sparte||''}}}; }
+function rueckgabeDialog(){
+ const t=activeTeam()||{}; const n=Q().nachweise.filter(x=>x.quelle!=='BARRY').length, tb=(t.tagebuch||[]).length;
+ const host=$('p3Rueck'); if(!host) return; showView('hfquali');
+ host.hidden=false;
+ host.innerHTML=`<div class="card p3-rueck"><h3>⬆ An BARRY zurückgeben</h3>
+  <p style="font-size:.88rem">BARRY bleibt die führende Verwaltung. Der Team-Begleiter erstellt zwei Dateien. Die Nachtragsdatei wird in BARRY unter <b>Verwaltung → Qualifikationen</b> eingelesen; jede Zeile wird dort angezeigt und erst nach Bestätigung gespeichert. Der Trainingsnachweis folgt dem gemeinsamen Austauschformat der RH-Apps.</p>
+  <ul class="p3-list"><li><b>Nachtragsdatei</b> (Format „barry-nachtrag“): ${n} selbst erfasste Nachweise – Kurse, Module, Suchprüfung, Fortbildungen.</li>
+  <li><b>Trainingsnachweis</b> (rhs-exchange v3): ${tb} Tagebucheinträge, Ausbildungsweg-Stand, Ampelstufen, Generalproben und Prüfungstermin.</li></ul>
+  ${!(t.barry&&t.barry.personId)?'<p class="muted" style="font-size:.82rem">Hinweis: Dieses Team wurde nicht aus BARRY übernommen. BARRY sucht die Person dann über den Namen „'+E(t.handler||'')+'“ – bitte genau wie in BARRY schreiben.</p>':''}
+  <div class="btn-row"><button class="btn primary" type="button" id="p3DlN" ${n?'':'disabled'}>Nachtragsdatei speichern</button><button class="btn" type="button" id="p3DlT">Trainingsnachweis speichern</button><button class="btn" type="button" id="p3DlX">Schließen</button></div></div>`;
+ $('p3DlN').onclick=()=>download(nachtragDatei(),'BARRY_Nachtrag_TeamBegleiter_'+sicherName(t.handler)+'_'+new Date().toISOString().slice(0,10)+'.json');
+ $('p3DlT').onclick=()=>download(trainingsDatei(),'RHS_Trainingsnachweis_'+sicherName((t.handler||'')+'_'+(t.dog||''))+'_'+new Date().toISOString().slice(0,10)+'.json');
+ $('p3DlX').onclick=()=>{host.hidden=true;};
+ setTimeout(()=>host.scrollIntoView({behavior:'smooth',block:'start'}),80);
+}
+
+/* ---------- Übernahme der Nachweise aus BARRY ---------- */
+function barryNachweiseUebernehmen(daten, personId){
+ if(!daten||!personId) return 0;
+ const quali=daten.qualifikationen||[]; const code=id=>(quali.find(q=>q.id===id)||{}).code||'';
+ const bekannt=new Set(K.map(k=>k.c)); let n=0;
+ (daten.personQualifikationen||[]).filter(pq=>pq&&pq.personId===personId).forEach(pq=>{
+  const c=code(pq.qualifikationId); if(!bekannt.has(c)) return; const d=String(pq.datum||'').slice(0,10);
+  if(Q().nachweise.some(x=>x.code===c&&x.datum===d&&(x.sparte||'')===(pq.sparte||''))) return;
+  Q().nachweise.push({id:'b-'+(pq.id||Math.random().toString(36).slice(2)),code:c,datum:d,gueltigBis:pq.gueltigBis||undefined,sparte:pq.sparte||undefined,ue:pq.ue||undefined,thema:pq.thema||undefined,quelle:'BARRY',unbestaetigt:!!(pq.vomMitglied&&!pq.bestaetigt)}); n++; });
+ return n;
+}
+
+/* ---------- Erweiterte Problembehandlung ---------- */
+const NEUE_SYMPTOME=[
+ {id:'p3a',titel:'Hund sucht nicht selbstständig – bleibt beim Hundeführer',hf:'Wird der Hund ständig angesprochen, geführt oder durch eigenes Mitgehen „mitgezogen“? Geht der Hundeführer selbst schneller als der Hund sucht?',
+  aufbau:'Versteckpersonen lagen oft zu nah oder sichtbar; Erfolg kam meist in Hundeführernähe. Die Revier-Tiefe wurde zu schnell gesteigert.',hund:'Unsicherheit im fremden Gelände, geringe Belohnungserwartung oder körperliche Ursachen ausschließen.',
+  empfehlung:'Revieren über Helfer aufbauen (Pendelrevier, Revier-Gasse), Hundeführer bleibt stehen oder geht ruhig mittig, Belohnung kommt vom Helfer. Tiefe in kleinen Schritten steigern.',betrifft:[],uebungen:['TB-P2-RV01','TB-P2-RV02','TB-P2-RV05','TB-P2-MO01','TB-P2-MO04','TB-P2-ST02']},
+ {id:'p3b',titel:'Hund reviert einseitig – sucht nur auf einer Seite',hf:'Schickt der Hundeführer immer zur gleichen Seite oder läuft selbst versetzt?',
+  aufbau:'Helfer lagen im Training überwiegend auf derselben Seite; leere Seiten wurden nie belohnt abgesucht.',hund:'Ein Hund, der bevorzugt auf die Windseite geht, arbeitet oft richtig – erst Wind prüfen, dann bewerten.',
+  empfehlung:'Seiten bewusst abwechseln, „leere Seite ehrlich absuchen“ trainieren, Richtung schicken auf Signal; Revieren im Wind gezielt üben.',betrifft:[],uebungen:['TB-P2-RV04','TB-P2-RV02','TB-P2-FU01','TB-P2-RV06','TB-P2-RV03']},
+ {id:'p3c',titel:'Wildablenkung – Hund nimmt Wildspuren auf oder hetzt',hf:'Kommt das Abbruchsignal zu spät oder ohne vorherigen Aufbau? Wird Wildwechsel vor der Suche angesprochen?',
+  aufbau:'Ablenkungen wurden nicht stufenweise trainiert; Stopp auf Distanz ist nicht gefestigt.',hund:'Jagdlich motivierte Hunde brauchen klare Alternativen; rassebedingte Anlagen berücksichtigen.',
+  empfehlung:'Ablenkungsleiter mit Wildgeruch (Fell/Wildspur) stufenweise, Stopp und Platz auf Distanz, Suche unterbrechen und wieder aufnehmen. Sicherheit: Jagdbetrieb, Straßen – im Zweifel Suche unterbrechen und Jagdaufsicht informieren.',betrifft:[],uebungen:['TB-P2-KO01','TB-P2-FU03','TB-P2-FU02','TB-P2-KO04','TB-P2-KO05']},
+ {id:'p3d',titel:'Hund ist überdreht – hektisch, unkonzentriert, rennt ohne Nase',hf:'Steigt die eigene Aufregung vor der Suche (Wartezeit, Prüfung)? Wird der Hund mit Stimme zusätzlich aufgeheizt?',
+  aufbau:'Zu viele Suchen hintereinander, zu lange Wartezeiten mit Sicht auf andere Teams, Jackpot vor der Arbeit statt danach.',hund:'Hohe Grunderregung; Schlaf- und Ruhephasen sowie Schmerzen prüfen.',
+  empfehlung:'Ruhiges Startritual, Erregung bewusst hoch- und runterfahren, kurze Suchblöcke mit Pause, Cool-down nach jeder Einheit. Eigene Atmung ruhig halten.',betrifft:[],uebungen:['TB-P2-KO03','TB-P2-MO04','TB-P2-KO02','RU-04','RU-03']},
+ {id:'p3e',titel:'Fehlanzeigen – Hund zeigt ohne Person an',hf:'Belohnt der Hundeführer schon vor der Bestätigung? Verrät die eigene Erwartung (Körpersprache) das Versteck?',
+  aufbau:'Anzeige an Gegenständen, Rucksäcken oder Futterstellen wurde unabsichtlich belohnt; Verstecke waren immer an ähnlichen Stellen.',hund:'Frust bei langen Suchen, Druck oder Unsicherheit können Ersatzanzeigen auslösen.',
+  empfehlung:'Belohnung nur an der Person, Blindsuchen mit Kontrolle durch Dritte, Gegenstände und Futter im Gebiet ignorieren lassen, Frustrationstoleranz aufbauen. In der Prüfung führt eine Fehlverweisung zum Nichtbestehen (PO 2024, 6.2.6).',betrifft:[],uebungen:['TB-P2-AN02','TB-P2-KO04','TB-P2-KO05','TB-P2-MO03']},
+ {id:'p3f',titel:'Anzeige bricht ab – Hund verlässt die Person zu früh',hf:'Kommt der Hundeführer zu langsam oder ruft unbewusst?',
+  aufbau:'Anzeigedauer wurde nicht systematisch verlängert; regungslose oder liegende Personen fehlten im Training.',hund:'Unsicherheit bei ungewohnten Personen (liegend, verdeckt, regungslos).',
+  empfehlung:'Anzeigedauer schrittweise verlängern, Anzeige bei regungsloser Person üben; Verbeller muss im 5-m-Umkreis bleiben (PO 2024, 6.2.4).',betrifft:[],uebungen:['TB-P2-AN01','TB-P2-AN02']}
+];
+function problemeErweitern(){
+ try{ if(typeof FEHLERSUCHE_SYMPTOME==='undefined') return; NEUE_SYMPTOME.forEach(s=>{ if(!FEHLERSUCHE_SYMPTOME.some(x=>x.id===s.id)) FEHLERSUCHE_SYMPTOME.push(s); }); }catch(e){}
+ if(typeof window.renderFehlerDetail==='function'&&!window.renderFehlerDetail.__p3){
+  const orig=window.renderFehlerDetail;
+  window.renderFehlerDetail=function(id){ const r=orig.apply(this,arguments); try{ const s=FEHLERSUCHE_SYMPTOME.find(x=>x.id===id); const card=$('fehlerDetailCard'); if(s&&s.uebungen&&card&&card.firstElementChild){
+    const pool=(typeof bibLoad==='function'?bibLoad().pool:[]); const items=s.uebungen.map(x=>pool.find(u=>(u.excelId||'')===x)).filter(Boolean);
+    if(items.length) card.firstElementChild.insertAdjacentHTML('beforeend','<div class="p3-ueb"><b>Passende Übungen</b><div class="btn-row" style="flex-wrap:wrap">'+items.map(u=>'<button class="btn small" type="button" data-p3ueb="'+E(u.excelId)+'">'+E(u.name)+'</button>').join('')+'</div></div>');
+    card.querySelectorAll('[data-p3ueb]').forEach(b=>b.onclick=()=>{ showView('bibliothek'); setTimeout(()=>{ if(typeof bibSetSuche==='function') bibSetSuche(b.dataset.p3ueb); },60); }); } }catch(e){} return r; };
+  window.renderFehlerDetail.__p3=true; }
+}
+
+/* ---------- Einbau ---------- */
+function init(){
+ const main=document.querySelector('main'); if(!main||$('view-hfquali')) return;
+ main.insertAdjacentHTML('beforeend','<section class="view" id="view-hfquali"><div class="stack"><div id="p3Rueck" hidden></div><div id="p3Stand"></div></div></section><section class="view" id="view-pruefplan"><div class="stack" id="p3Plan"></div></section>');
+ const orig=window.showView;
+ window.showView=function(id,opts){ const r=orig.call(this,id,opts); try{ if(id==='hfquali') renderStand(); else if(id==='pruefplan') renderPlan(); else if(id==='fehlerdiagnose') problemeErweitern(); }catch(e){console.error('Paket 3:',e)} return r; };
+ problemeErweitern();
+ const ps=document.querySelector('#view-profil .stack'); if(ps&&!$('p3ProfilLink')) ps.insertAdjacentHTML('afterbegin','<div class="card" id="p3ProfilLink"><b>🚦 Ausbildungsstand der Hundeführerin / des Hundeführers</b><p class="muted" style="font-size:.85rem;margin:4px 0 8px">Kurse, Pflichtausbildungen und Fristen mit Ampel – vom Helfer bis zum einsatzfähigen Team.</p><div class="btn-row"><button class="btn primary" type="button" onclick="showView(\'hfquali\');scrollTo(0,0)">Ausbildungsstand öffnen</button><button class="btn" type="button" onclick="showView(\'pruefplan\');scrollTo(0,0)">Prüfung planen</button></div></div>');
+ // Übernahme aus BARRY: Nachweise der Person mitnehmen
+ if(typeof window.barryUebernehmen==='function'){ const ob=window.barryUebernehmen; window.barryUebernehmen=function(){ let u=null; try{ u=(typeof barryUi!=='undefined')?barryUi:null; }catch(e){}
+   const e=u&&u.teams?u.teams.find(x=>x.key===u.key):null; const daten=u&&u.daten; const r=ob.apply(this,arguments);
+   try{ const n=barryNachweiseUebernehmen(daten, e&&e.personId); if(n){ saveState(); setTimeout(()=>alert(n+' Nachweis(e) aus BARRY in den Ausbildungsstand übernommen.'),300); } }catch(err){console.error(err)} return r; };
+  const btn=$('btnBarryUebernahme'); }
+}
+window.TBPaket3={stufen,fristen,renderStand,renderPlan,nachtragDatei,trainingsDatei,barryNachweiseUebernehmen,KATALOG:K};
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>setTimeout(init,0)); else setTimeout(init,0);
+})();
+</script>
 <script id="tbs-shell">/* ===== Team-Begleiter 3.0 – neue Oberfläche: Heute, Ausbildungsweg, Training, Übungen, Mehr ===== */
 (function(){
 const $=id=>document.getElementById(id);
@@ -7136,7 +7493,7 @@ function stationen(){
   links:spL.concat([['Übungen: Konzentration & Ablenkung','bib:konzentration'],['Übungen: HF-Taktik','bib:hf'],['Einsatzszenarien','bib:szenario']])});
  S.push({id:'einsatz',n:S.filter(x=>x.n).length+1,t:'Prüfung & Einsatzfähigkeit',d:'Theorie, Helferarbeit, Funk & Orientierung, Unterkunft und Fitness – damit das Team auch im Einsatz sicher bleibt.',
   c:'r',stand:'Begleitend zu allen Stationen',
-  links:[['Theorie-Ausbildung','theorie'],['Helferschulung','helferschulung'],['Übungen: Funk & Orientierung','bib:funkorient'],['Übungen: Fitness','bib:fitness'],['Einsatzunterkunft','bib:unterkunft'],['Bonus-Einsatzfelder','bonus']]});
+  links:[['Ausbildungsstand (Ampel)','hfquali',1],['Prüfung planen & Generalprobe','pruefplan'],['Theorie-Ausbildung','theorie'],['Helferschulung','helferschulung'],['Übungen: Funk & Orientierung','bib:funkorient'],['Übungen: Fitness','bib:fitness'],['Einsatzunterkunft','bib:unterkunft'],['Bonus-Einsatzfelder','bonus']]});
  return S;
 }
 function aktuelle(S){const st=S.filter(x=>x.n);const vor=st.filter(x=>['m11','m12','m13'].includes(x.id)&&x.c!=='n');
@@ -7155,6 +7512,7 @@ function renderHeute(){const host=$('tbsHeute');if(!host)return;const t=team()||
  host.innerHTML=(name?`<div class="tbs-card"><h2>${name}</h2><p class="tbs-sub">Ausbildungsweg: ${st.filter(x=>x.c==='g').length} von ${st.length} Stationen sicher</p><div class="tbs-dots">${st.map(x=>`<span class="${x.c}" title="${E(x.t)}"></span>`).join('')}</div>
    <p style="margin:10px 0 8px">Weiter bei: <b>${E(a.t)}</b><br><span class="tbs-sub">${E(a.stand||'')}</span></p><div class="tbs-links"><button type="button" class="p" data-tbs="${E(a.links[0][1])}">▶ ${E(a.links[0][0])} öffnen</button><button type="button" data-tbs="weg">🧭 Ganzer Weg</button></div></div>`
   :`<div class="tbs-card"><h2>Willkommen beim Team-Begleiter</h2><p class="tbs-sub">Er begleitet Hundeführer/in und Hund von den ersten Übungen bis zum geprüften Rettungshundeteam – Schritt für Schritt entlang eines Ausbildungswegs. Legen Sie zuerst Ihr Team an.</p><div class="tbs-links"><button type="button" class="p" data-tbs="profil">Team anlegen</button><button type="button" data-tbs="weg">🧭 Ausbildungsweg ansehen</button></div></div>`)
+ +(()=>{try{const f=window.TBPaket3?TBPaket3.fristen():[];return f.length?`<div class="tbs-card" style="border-left:4px solid #c98a00"><b>⏰ ${f.length} Frist${f.length===1?'':'en'} im Blick</b><p class="tbs-sub" style="margin:4px 0 8px">${f.slice(0,3).map(x=>E((x.l||(TBPaket3.KATALOG.find(k=>k.c===x.c)||{l:x.c}).l)+': '+(x.st.text||''))).join('<br>')}</p><div class="tbs-links"><button type="button" data-tbs="hfquali">🚦 Ausbildungsstand</button></div></div>`:''}catch(e){return ''}})()
  +`<div class="tbs-grid" style="margin-bottom:14px">
    <button type="button" class="tbs-tile primary" data-tbs="tbm:einheit"><span class="i">▶</span>Training für heute</button>
    <button type="button" class="tbs-tile" data-tbs="tbm:rad"><span class="i">🎡</span>Glücksrad</button>
@@ -7173,13 +7531,13 @@ function renderWeg(){const host=$('tbsWeg');if(!host)return;const S=stationen(),
   html+=`<div class="tbs-st ${x.c==='n'?'':x.c}${x===a?' akt':''}"><div class="tbs-st-h"><span class="n">${x.n}</span><div><h3>${E(x.t)}</h3><p>${E(x.d)}</p></div></div>
   <div class="tbs-stand">${ampel} · ${E(x.stand||'')}</div>${x.bar!=null?`<div class="tbs-bar"><div style="width:${Math.round((x.bar||0)*100)}%"></div></div>`:''}
   ${x.hinweis?`<div class="tbs-hinweis">ℹ️ ${E(x.hinweis)}</div>`:''}
-  <div class="tbs-links">${x.links.filter(l=>['kueche','spiele'].includes(l[1])||l[1].startsWith('bib:')||sichtbar(l[1])||['profil','vdh'].includes(l[1])).map(l=>`<button type="button" class="${l[2]?'p':''}" data-tbs="${E(l[1])}">${E(l[0])}</button>`).join('')}</div></div>`});
+  <div class="tbs-links">${x.links.filter(l=>['kueche','spiele','hfquali','pruefplan'].includes(l[1])||l[1].startsWith('bib:')||sichtbar(l[1])||['profil','vdh'].includes(l[1])).map(l=>`<button type="button" class="${l[2]?'p':''}" data-tbs="${E(l[1])}">${E(l[0])}</button>`).join('')}</div></div>`});
  zu();
  host.innerHTML=`<div class="tbs-card"><h2>Ausbildungsweg</h2><p class="tbs-sub">Vom ersten Training bis zum geprüften Rettungshundeteam. Der Stand ergibt sich aus Ihren Einträgen in den Bereichen (Kompetenzstatus „Sicher beherrscht“ oder „Geprüft“ zählt als sicher). Rückschritte sind Teil des Plans.</p></div>`+html;
  bind(host)}
 /* ---------- Mehr ---------- */
 function renderMehr(){const host=$('tbsMehr');if(!host)return;const vb=verband();
- const kach=(liste)=>`<div class="tbs-grid">${liste.filter(([,z])=>['kueche','spiele','weg'].includes(z)||z.startsWith('bib:')||z.startsWith('tbm:')||z==='sicherung'||sichtbar(z)).map(([i,z,l])=>`<button type="button" class="tbs-tile" data-tbs="${z}"><span class="i">${i}</span>${E(l)}</button>`).join('')}</div>`;
+ const kach=(liste)=>`<div class="tbs-grid">${liste.filter(([,z])=>['kueche','spiele','weg','hfquali','pruefplan'].includes(z)||z.startsWith('bib:')||z.startsWith('tbm:')||z==='sicherung'||sichtbar(z)).map(([i,z,l])=>`<button type="button" class="tbs-tile" data-tbs="${z}"><span class="i">${i}</span>${E(l)}</button>`).join('')}</div>`;
  const pruef=vb==='drk_hessen'?[['1️⃣','drk11','Modul 1.1'],['2️⃣','drk12','Modul 1.2'],['3️⃣','drk13','Modul 1.3'],['🎓','vdh','BH/VT (VDH)']]:(typeof TABS_ALL!=='undefined'?TABS_ALL.filter(x=>x.verband===vb).map(x=>['📋',x.id,x.label]):[]).concat([['🎓','vdh','BH/VT (VDH)']]);
  const ans=(()=>{try{return tbAnsicht()}catch(e){return 'staffel'}})();const th=document.documentElement.getAttribute('data-theme')||'light';
  host.innerHTML=`<p class="tbs-section">Ausbildung</p>${kach([['💛','findewille','Finde- & Anzeigewille'],['📣','anzeigeaufbau','Anzeigeaufbau'],['🧱','truemmeraufbau','Trümmeraufbau'],['🧠','mental-truemmer','Trümmer & mentale Stärke'],['🐾','mantrailing','Mantrailing'],['🪜','geraete','Gerätearbeit & Trümmer']])}
@@ -7187,7 +7545,7 @@ function renderMehr(){const host=$('tbsMehr');if(!host)return;const vb=verband()
  <p class="tbs-section">Gemeinsam trainieren</p>${kach([['🎲','spiele','Trainingsspiele'],['🎡','tbm:rad','Glücksrad & Gruppenübungen'],['🙋','helferschulung','Helferschulung'],['👥','ausbilder','Ausbilder-Übersicht']])}
  <p class="tbs-section">Wissen & Kompetenz</p>${kach([['🔍','fehlerdiagnose','Fehlerdiagnose'],['🧑‍🤝‍🧑','hfkompetenz','HF-Kompetenz'],['🌙','lernalltag','Lernen & Alltag'],['📄','theorie','Theorie-Ausbildung'],['🌊','bonus','Lawine · Wasser · Klima'],['🧩','tbm:problem','Problem angehen']])}
  <p class="tbs-section">Gesundheit, Ruhe & Ernährung</p>${kach([['🍲','kueche','Hundeküche'],['🩹','bib:pflege','Pflege & Erste Hilfe am Hund'],['😌','bib:ruhe','Ruhe & Entspannung (inkl. TTouch)'],['🐾','bib:pfoten','Pfoten & Körperbewusstsein']])}
- <p class="tbs-section">Team & Daten</p>${kach([['🐕','profil','Profil & Teams'],['📔','tagebuch','Tagebuch'],['🧭','weg','Ausbildungsweg'],['💾','sicherung','Sicherung & BARRY']])}
+ <p class="tbs-section">Team & Daten</p>${kach([['🐕','profil','Profil & Teams'],['🚦','hfquali','Ausbildungsstand Hundeführer/in'],['🗓','pruefplan','Prüfung planen & Generalprobe'],['📔','tagebuch','Tagebuch'],['🧭','weg','Ausbildungsweg'],['💾','sicherung','Sicherung & BARRY']])}
  <p class="tbs-section">Einstellungen</p><div class="tbs-card"><div class="tbs-row" style="margin-bottom:10px"><b style="min-width:90px">Ansicht</b><span class="tbs-seg"><button type="button" data-ans="alltag" aria-pressed="${ans==='alltag'}">Alltag</button><button type="button" data-ans="staffel" aria-pressed="${ans!=='alltag'}">Staffel</button></span></div>
  <p class="tbs-sub" style="margin:-4px 0 12px">Alltag zeigt nur die Bereiche für das tägliche Üben, Staffel alle Bereiche mit Prüfungsordnungen, Helfern und Ausbildern.</p>
  <div class="tbs-row"><b style="min-width:90px">Design</b><span class="tbs-seg"><button type="button" data-th="light" aria-pressed="${th!=='dark'}">Hell</button><button type="button" data-th="dark" aria-pressed="${th==='dark'}">Dunkel</button></span></div></div>`;
