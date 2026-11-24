@@ -8356,7 +8356,9 @@ async function startseite(){
     ${lz.length?`<div class="karte"><b>🔖 Lesezeichen</b>${lz.map((x,i)=>`<div style="display:flex;align-items:center"><button class="zeile" data-l="lz" data-n="${i}">${e(BAND[x.band].k)} · ${e(x.titel)}</button><span class="knopf" data-l="lzweg" data-n="${i}" title="Lesezeichen entfernen">✕</span></div>`).join('')}</div>`:''}`,'Ausbildungshandbuch');
 }
 async function einlesen(ev){
-  const files=[...(ev.target.files||[])]; ev.target.value=''; let n=0;
+  const files=[...(ev.target.files||[])]; ev.target.value=''; await dateienEinlesen(files);
+}
+async function dateienEinlesen(files){ let n=0;
   for(const f of files){ try{ const p=JSON.parse(await f.text());
       if(!p||p.format!=='rhs-buch'||!BAND[p.band]||!Array.isArray(p.abschnitte)) { CFG.toast(f.name+': kein Buchpaket des Ausbildungshandbuchs.'); continue; }
       if(!CFG.baende.includes(p.band)) { CFG.toast(BAND[p.band].t+' ist in dieser App nicht vorgesehen.'); continue; }
@@ -8464,6 +8466,7 @@ document.addEventListener('click',ev=>{ const a=ev.target.closest&&ev.target.clo
 document.addEventListener('click',ev=>{ const a=ev.target.closest&&ev.target.closest('[data-rhs-buch-start]'); if(!a) return; ev.preventDefault(); RHSBuch.oeffnen(); });
 
 window.RHSBuch={
+  async importieren(files){ rahmen(); document.body.style.overflow='hidden'; await laden(); await dateienEinlesen([...(files||[])]); },
   async oeffnen(id){ rahmen(); document.body.style.overflow='hidden'; await laden(); verlauf=[]; akt=null; if(id){ if(!springe(id)) startseite(); } else startseite(); },
   linkify, eingelesen:b=>!!geladen[b],
   async status(){ await laden(); return CFG.baende.map(b=>({band:b,geladen:!!geladen[b]})); }
